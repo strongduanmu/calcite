@@ -229,8 +229,7 @@ class CsvTest {
   void testPushDownProject() throws SQLException {
     final String sql = "explain plan for select * from EMPS";
     final String expected =
-        "PLAN=CsvTableScan(table=[[SALES, EMPS]], " + "fields=[[0, 1, 2, 3, " + "4, 5, 6, 7, 8, " +
-            "9]])\n";
+        "PLAN=CsvTableScan(table=[[SALES, EMPS]], " + "fields=[[0, 1, 2, 3, " + "4, 5, 6, 7, 8, " + "9]])\n";
     sql("smart", sql).returns(expected).ok();
   }
 
@@ -274,15 +273,18 @@ class CsvTest {
     String extra = null;
     switch (format) {
     case "dot":
-      expected = "PLAN=digraph {\n" + "\"EnumerableCalc\\nexpr#0..1 = {inputs}\\nexpr#2 = " + "'F" +
-          "':VARCHAR\\nexpr#3 = =($t1, $t2)" + "\\nproj#0..1 = {exprs}\\n$condition = $t3\" -> " + "\"EnumerableAggregate\\ngroup = " + "{}\\nEXPR$0 = MAX($0)\\n\" [label=\"0\"]\n" + "\"CsvTableScan\\ntable = [SALES, EMPS\\n]\\nfields = [0, 3]\\n\" -> " + "\"EnumerableCalc\\nexpr#0..1 = {inputs}\\nexpr#2 = 'F':VARCHAR\\nexpr#3 = =($t1, $t2)" + "\\nproj#0..1 = {exprs}\\n$condition = $t3\" [label=\"0\"]\n" + "}\n";
+      expected = "PLAN=digraph {\n" + "\"EnumerableCalc\\nexpr#0..1 = {inputs}\\nexpr#2 = " + "'F"
+          + "':VARCHAR\\nexpr#3 = =($t1, $t2)" + "\\nproj#0..1 = {exprs}\\n$condition = $t3\" -> "
+          + "\"EnumerableAggregate\\ngroup = " + "{}\\nEXPR$0 = MAX($0)\\n\" [label=\"0\"]\n" +
+          "\"CsvTableScan\\ntable = [SALES, EMPS\\n]\\nfields = [0, 3]\\n\" -> " +
+          "\"EnumerableCalc\\nexpr#0..1 = {inputs}\\nexpr#2 = 'F':VARCHAR\\nexpr#3 = =($t1, $t2)" + "\\nproj#0..1 = {exprs}\\n$condition = $t3\" [label=\"0\"]\n" + "}\n";
       extra = " as dot ";
       break;
     case "text":
       expected = "PLAN=" + "EnumerableAggregate(group=[{}], EXPR$0=[MAX($0)])\n" + "  " +
           "EnumerableCalc(expr#0..1=[{inputs}], expr#2=['F':VARCHAR], " + "expr#3=[=($t1, $t2)], "
-          + "proj#0..1=[{exprs}], $condition=[$t3])\n" + "    CsvTableScan(table=[[SALES, EMPS]]," +
-          " " + "fields=[[0, 3]])\n";
+          + "proj#0..1=[{exprs}], $condition=[$t3])\n" + "    CsvTableScan(table=[[SALES, EMPS]],"
+          + " " + "fields=[[0, 3]])\n";
       extra = "";
       break;
     }
@@ -299,23 +301,17 @@ class CsvTest {
     switch (format) {
     case "dot":
       expected = "PLAN=digraph {\n" + "\"EnumerableAggregate\\ngroup = {0, 1}\\nQTY = COUNT()" +
-          "\\n\" -> " + "\"EnumerableAggregate\\ngroup = {1}\\nEXPR$1 = MAX($2)\\n\" " + "[label" +
-          "=\"0\"]\n" + "\"CsvTableScan\\ntable = [SALES, EMPS\\n]\\nfields = [1, 3]\\n\" " + "->" +
-          " " + "\"EnumerableAggregate\\ngroup = {0, 1}\\nQTY = COUNT()\\n\" [label=\"0\"]\n" +
-          "}\n";
+          "\\n\" -> " + "\"EnumerableAggregate\\ngroup = {1}\\nEXPR$1 = MAX($2)\\n\" " + "[label" + "=\"0\"]\n" + "\"CsvTableScan\\ntable = [SALES, EMPS\\n]\\nfields = [1, 3]\\n\" " + "->" + " " + "\"EnumerableAggregate\\ngroup = {0, 1}\\nQTY = COUNT()\\n\" [label=\"0\"]\n" + "}\n";
       extra = " as dot ";
       break;
     case "text":
       expected = "PLAN=" + "EnumerableAggregate(group=[{1}], EXPR$1=[MAX($2)])\n" + "  " +
-          "EnumerableAggregate(group=[{0, 1}], QTY=[COUNT()])\n" + "    CsvTableScan" + "(table" +
-          "=[[SALES, EMPS]], fields=[[1, 3]])\n";
+          "EnumerableAggregate(group=[{0, 1}], QTY=[COUNT()])\n" + "    CsvTableScan" + "(table" + "=[[SALES, EMPS]], fields=[[1, 3]])\n";
       extra = "";
       break;
     }
     final String sql =
-        "explain plan " + extra + " for\n" + "select gender, max(qty)\n" + "from " + "(\n" + "  " +
-            "select name, gender, count(*) qty\n" + "  from EMPS\n" + "  group by name, " +
-            "gender) t\n" + "group by gender";
+        "explain plan " + extra + " for\n" + "select gender, max(qty)\n" + "from " + "(\n" + "  " + "select name, gender, count(*) qty\n" + "  from EMPS\n" + "  group by name, " + "gender) t\n" + "group by gender";
     sql("smart", sql).returns(expected).ok();
   }
 
@@ -365,8 +361,9 @@ class CsvTest {
    */
   @Test
   void testFilterableWhereWithNot1() throws SQLException {
-    sql("filterable-model", "select name, empno from EMPS " + "where name like '%E%' and city " +
-        "not" + " like '%W%' ").returns("NAME=Eric; EMPNO=110").ok();
+    sql("filterable-model",
+        "select name, empno from EMPS " + "where name like '%E%' and city " + "not" + " like " +
+            "'%W%' ").returns("NAME=Eric; EMPNO=110").ok();
   }
 
   /**
@@ -375,8 +372,9 @@ class CsvTest {
    */
   @Test
   void testFilterableWhereWithNot2() throws SQLException {
-    sql("filterable-model", "select name, empno from EMPS " + "where name like '%i%' and name " +
-        "not" + " like '%W%' ").returns("NAME=Eric; EMPNO=110", "NAME=Alice; EMPNO=130").ok();
+    sql("filterable-model",
+        "select name, empno from EMPS " + "where name like '%i%' and name " + "not" + " like " +
+            "'%W%' ").returns("NAME=Eric; EMPNO=110", "NAME=Alice; EMPNO=130").ok();
   }
 
   @Test
@@ -385,8 +383,10 @@ class CsvTest {
     final String[] lines = {"id=19990101; dow=Friday; longDate=New Years Day; title=Tractor " +
         "trouble.; " + "characters=[Alice, Bob, Xavier]; script=Julian Hyde; summary=; " + "lines"
         + "=[Bob's tractor got stuck in a field., " + "Alice and Xavier hatch a plan to surprise "
-        + "Charlie.]", "id=19990103; dow=Sunday; longDate=Sunday 3rd January; " + "title=Charlie" +
-        "'s " + "surprise.; characters=[Alice, Zebedee, Charlie, Xavier]; " + "script=William " + "Shakespeare; summary=; " + "lines=[Charlie is very surprised by Alice and Xavier's " + "surprise plan.]",};
+        + "Charlie.]",
+        "id=19990103; dow=Sunday; longDate=Sunday 3rd January; " + "title=Charlie" + "'s " +
+            "surprise.; characters=[Alice, Zebedee, Charlie, Xavier]; " + "script=William " +
+            "Shakespeare; summary=; " + "lines=[Charlie is very surprised by Alice and Xavier's " + "surprise plan.]",};
     sql("bug", sql).returns(lines).ok();
   }
 
@@ -495,8 +495,8 @@ class CsvTest {
 
     final String sql2 = "select \"joined at\", \"naME\"\n" + "from wacky_column_names\n" + "where"
         + " \"2gender\" = 'F'";
-    sql("bug", sql2).returns("joined at=2005-09-07; naME=Wilma", "joined at=2007-01-01; " + "naME" +
-        "=Alice").ok();
+    sql("bug", sql2).returns("joined at=2005-09-07; naME=Wilma", "joined at=2007-01-01; " + "naME"
+        + "=Alice").ok();
   }
 
   /**
@@ -522,8 +522,8 @@ class CsvTest {
   @Test
   void testUnionGroupByWithoutGroupKey() {
     final String sql =
-        "select count(*) as c1 from EMPS group by NAME\n" + "union\n" + "select " + "count(*) as " +
-            "c1 from EMPS group by NAME";
+        "select count(*) as c1 from EMPS group by NAME\n" + "union\n" + "select " + "count(*) as "
+            + "c1 from EMPS group by NAME";
     sql("model", sql).ok();
   }
 
@@ -535,8 +535,9 @@ class CsvTest {
 
   @Test
   void testReadme() throws SQLException {
-    final String sql = "SELECT d.name, COUNT(*) cnt" + " FROM emps AS e" + " JOIN depts AS d ON " +
-        "e" + ".deptno = d.deptno" + " GROUP BY d.name";
+    final String sql =
+        "SELECT d.name, COUNT(*) cnt" + " FROM emps AS e" + " JOIN depts AS d ON " + "e" +
+            ".deptno = d.deptno" + " GROUP BY d.name";
     sql("smart", sql).returns("NAME=Sales; CNT=1", "NAME=Marketing; CNT=2").ok();
   }
 
@@ -702,8 +703,7 @@ class CsvTest {
     Properties info = new Properties();
     info.put("model", jsonPath("bug"));
     final String sql =
-        "select \"EMPNO\", \"JOINTIMES\" from \"DATE\"\n" + "group by \"EMPNO\"," + "\"JOINTIMES" +
-            "\" order by \"JOINTIMES\"";
+        "select \"EMPNO\", \"JOINTIMES\" from \"DATE\"\n" + "group by \"EMPNO\"," + "\"JOINTIMES" + "\" order by \"JOINTIMES\"";
     try (Connection connection = DriverManager.getConnection("jdbc:calcite:", info); Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(sql)) {
       assertThat(resultSet.next(), is(true));
       final Timestamp timestamp = resultSet.getTimestamp(2);
@@ -752,23 +752,25 @@ class CsvTest {
       final Statement statement = connection.createStatement();
 
       // date
-      final String sql1 = "select JOINEDAT from \"DATE\"\n" + "where JOINEDAT < {d " + "'2000-01" +
-          "-01'}\n" + "or JOINEDAT >= {d '2017-01-01'}";
+      final String sql1 =
+          "select JOINEDAT from \"DATE\"\n" + "where JOINEDAT < {d " + "'2000-01" + "-01'}\n" +
+              "or JOINEDAT >= {d '2017-01-01'}";
       final ResultSet joinedAt = statement.executeQuery(sql1);
       assertThat(joinedAt.next(), is(true));
       assertThat(joinedAt.getDate(1), is(java.sql.Date.valueOf("1996-08-03")));
 
       // time
-      final String sql2 = "select JOINTIME from \"DATE\"\n" + "where JOINTIME >= {t " + "'07:00" +
-          ":00'}\n" + "and JOINTIME < {t '08:00:00'}";
+      final String sql2 =
+          "select JOINTIME from \"DATE\"\n" + "where JOINTIME >= {t " + "'07:00" + ":00'}\n" +
+              "and JOINTIME < {t '08:00:00'}";
       final ResultSet joinTime = statement.executeQuery(sql2);
       assertThat(joinTime.next(), is(true));
       assertThat(joinTime.getTime(1), is(java.sql.Time.valueOf("07:15:56")));
 
       // timestamp
       final String sql3 =
-          "select JOINTIMES,\n" + "  {fn timestampadd(SQL_TSI_DAY, 1, JOINTIMES)" + "}\n" + "from" +
-              " \"DATE\"\n" + "where (JOINTIMES >= {ts '2003-01-01 00:00:00'}\n" + "and " +
+          "select JOINTIMES,\n" + "  {fn timestampadd(SQL_TSI_DAY, 1, JOINTIMES)" + "}\n" + "from"
+              + " \"DATE\"\n" + "where (JOINTIMES >= {ts '2003-01-01 00:00:00'}\n" + "and " +
               "JOINTIMES < {ts '2006-01-01 00:00:00'})\n" + "or (JOINTIMES >= {ts '2003-01-01 " + "00:00:00'}\n" + "and JOINTIMES < {ts '2007-01-01 00:00:00'})";
       final ResultSet joinTimes = statement.executeQuery(sql3);
       assertThat(joinTimes.next(), is(true));
@@ -796,8 +798,8 @@ class CsvTest {
     try (Connection connection = DriverManager.getConnection("jdbc:calcite:", info)) {
       final Statement statement = connection.createStatement();
       final String sql1 =
-          "select extract(year from JOINTIMES)\n" + "from \"DATE\"\n" + "where " + "extract(year " +
-              "from JOINTIMES) in (2006, 2007)";
+          "select extract(year from JOINTIMES)\n" + "from \"DATE\"\n" + "where " + "extract(year "
+              + "from JOINTIMES) in (2006, 2007)";
       final ResultSet joinTimes = statement.executeQuery(sql1);
       assertThat(joinTimes.next(), is(true));
       assertThat(joinTimes.getInt(1), is(2007));
@@ -881,8 +883,9 @@ class CsvTest {
       assertThat(joinTime.getTime(1), is(java.sql.Time.valueOf("00:01:02")));
 
       // timestamp
-      final String sql3 = "select JOINTIMES from \"DATE\"\n" + "where JOINTIMES > {ts " +
-          "'1990-01-01" + " 00:00:00'}";
+      final String sql3 =
+          "select JOINTIMES from \"DATE\"\n" + "where JOINTIMES > {ts " + "'1990" + "-01-01" + " "
+              + "00:00:00'}";
       final ResultSet joinTimes = statement.executeQuery(sql3);
       assertThat(joinTimes.next(), is(true));
       assertThat(joinTimes.getTimestamp(1).getClass(), equalTo(java.sql.Timestamp.class));
