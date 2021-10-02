@@ -59,15 +59,18 @@ public class AbstractSchema implements Schema {
   public AbstractSchema() {
   }
 
-  @Override public boolean isMutable() {
+  @Override
+  public boolean isMutable() {
     return true;
   }
 
-  @Override public Schema snapshot(SchemaVersion version) {
+  @Override
+  public Schema snapshot(SchemaVersion version) {
     return this;
   }
 
-  @Override public Expression getExpression(@Nullable SchemaPlus parentSchema, String name) {
+  @Override
+  public Expression getExpression(@Nullable SchemaPlus parentSchema, String name) {
     requireNonNull(parentSchema, "parentSchema");
     return Schemas.subSchemaExpression(parentSchema, name, getClass());
   }
@@ -86,12 +89,14 @@ public class AbstractSchema implements Schema {
     return ImmutableMap.of();
   }
 
-  @Override public final Set<String> getTableNames() {
+  @Override
+  public final Set<String> getTableNames() {
     //noinspection RedundantCast
     return (Set<String>) getTableMap().keySet();
   }
 
-  @Override public final @Nullable Table getTable(String name) {
+  @Override
+  public final @Nullable Table getTable(String name) {
     return getTableMap().get(name);
   }
 
@@ -109,11 +114,13 @@ public class AbstractSchema implements Schema {
     return ImmutableMap.of();
   }
 
-  @Override public @Nullable RelProtoDataType getType(String name) {
+  @Override
+  public @Nullable RelProtoDataType getType(String name) {
     return getTypeMap().get(name);
   }
 
-  @Override public Set<String> getTypeNames() {
+  @Override
+  public Set<String> getTypeNames() {
     //noinspection RedundantCast
     return (Set<String>) getTypeMap().keySet();
   }
@@ -135,11 +142,13 @@ public class AbstractSchema implements Schema {
     return ImmutableMultimap.of();
   }
 
-  @Override public final Collection<Function> getFunctions(String name) {
+  @Override
+  public final Collection<Function> getFunctions(String name) {
     return getFunctionMultimap().get(name); // never null
   }
 
-  @Override public final Set<String> getFunctionNames() {
+  @Override
+  public final Set<String> getFunctionNames() {
     return getFunctionMultimap().keySet();
   }
 
@@ -157,24 +166,29 @@ public class AbstractSchema implements Schema {
     return ImmutableMap.of();
   }
 
-  @Override public final Set<String> getSubSchemaNames() {
+  @Override
+  public final Set<String> getSubSchemaNames() {
     //noinspection RedundantCast
     return (Set<String>) getSubSchemaMap().keySet();
   }
 
-  @Override public final @Nullable Schema getSubSchema(String name) {
+  @Override
+  public final @Nullable Schema getSubSchema(String name) {
     return getSubSchemaMap().get(name);
   }
 
-  /** Schema factory that creates an
-   * {@link org.apache.calcite.schema.impl.AbstractSchema}. */
+  /**
+   * Schema factory that creates an
+   * {@link org.apache.calcite.schema.impl.AbstractSchema}.
+   */
   public static class Factory implements SchemaFactory {
     public static final Factory INSTANCE = new Factory();
 
-    private Factory() {}
+    private Factory() {
+    }
 
-    @Override public Schema create(SchemaPlus parentSchema, String name,
-        Map<String, Object> operand) {
+    @Override
+    public Schema create(SchemaPlus parentSchema, String name, Map<String, Object> operand) {
       return new AbstractSchema();
     }
   }
