@@ -58,15 +58,13 @@ import java.util.Map;
  * public default constructor.
  */
 public interface SchemaFactory {
-  /** Creates a Schema.
+  /**
+   * Creates a Schema.
    *
    * @param parentSchema Parent schema
    * @param name Name of this schema
    * @param operand The "operand" JSON property
    * @return Created schema
    */
-  Schema create(
-      SchemaPlus parentSchema,
-      String name,
-      Map<String, Object> operand);
+  Schema create(SchemaPlus parentSchema, String name, Map<String, Object> operand);
 }

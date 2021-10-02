@@ -31,15 +31,17 @@ import java.util.List;
  *
  * @see CsvRules#PROJECT_SCAN
  */
-public class CsvProjectTableScanRule
-    extends RelRule<CsvProjectTableScanRule.Config> {
+public class CsvProjectTableScanRule extends RelRule<CsvProjectTableScanRule.Config> {
 
-  /** Creates a CsvProjectTableScanRule. */
+  /**
+   * Creates a CsvProjectTableScanRule.
+   */
   protected CsvProjectTableScanRule(Config config) {
     super(config);
   }
 
-  @Override public void onMatch(RelOptRuleCall call) {
+  @Override
+  public void onMatch(RelOptRuleCall call) {
     final LogicalProject project = call.rel(0);
     final CsvTableScan scan = call.rel(1);
     int[] fields = getProjectFields(project.getProjects());
@@ -47,12 +49,7 @@ public class CsvProjectTableScanRule
       // Project contains expressions more complex than just field references.
       return;
     }
-    call.transformTo(
-        new CsvTableScan(
-            scan.getCluster(),
-            scan.getTable(),
-            scan.csvTable,
-            fields));
+    call.transformTo(new CsvTableScan(scan.getCluster(), scan.getTable(), scan.csvTable, fields));
   }
 
   private static int[] getProjectFields(List<RexNode> exps) {
@@ -68,15 +65,15 @@ public class CsvProjectTableScanRule
     return fields;
   }
 
-  /** Rule configuration. */
+  /**
+   * Rule configuration.
+   */
   public interface Config extends RelRule.Config {
-    Config DEFAULT = EMPTY
-        .withOperandSupplier(b0 ->
-            b0.operand(LogicalProject.class).oneInput(b1 ->
-                b1.operand(CsvTableScan.class).noInputs()))
-        .as(Config.class);
+    Config DEFAULT =
+        EMPTY.withOperandSupplier(b0 -> b0.operand(LogicalProject.class).oneInput(b1 -> b1.operand(CsvTableScan.class).noInputs())).as(Config.class);
 
-    @Override default CsvProjectTableScanRule toRule() {
+    @Override
+    default CsvProjectTableScanRule toRule() {
       return new CsvProjectTableScanRule(this);
     }
   }

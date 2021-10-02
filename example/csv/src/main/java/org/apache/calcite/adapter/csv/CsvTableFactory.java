@@ -42,14 +42,13 @@ public class CsvTableFactory implements TableFactory<CsvTable> {
   public CsvTableFactory() {
   }
 
-  @Override public CsvTable create(SchemaPlus schema, String name,
-      Map<String, Object> operand, @Nullable RelDataType rowType) {
+  @Override
+  public CsvTable create(SchemaPlus schema, String name, Map<String, Object> operand,
+      @Nullable RelDataType rowType) {
     String fileName = (String) operand.get("file");
-    final File base =
-        (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
+    final File base = (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
     final Source source = Sources.file(base, fileName);
-    final RelProtoDataType protoRowType =
-        rowType != null ? RelDataTypeImpl.proto(rowType) : null;
+    final RelProtoDataType protoRowType = rowType != null ? RelDataTypeImpl.proto(rowType) : null;
     return new CsvScannableTable(source, protoRowType);
   }
 }

@@ -42,18 +42,17 @@ public class CsvStreamTableFactory implements TableFactory<CsvTable> {
   public CsvStreamTableFactory() {
   }
 
-  @Override public CsvTable create(SchemaPlus schema, String name,
-      Map<String, Object> operand, @Nullable RelDataType rowType) {
+  @Override
+  public CsvTable create(SchemaPlus schema, String name, Map<String, Object> operand,
+      @Nullable RelDataType rowType) {
     String fileName = (String) operand.get("file");
     File file = new File(fileName);
-    final File base =
-        (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
+    final File base = (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
     if (base != null && !file.isAbsolute()) {
       file = new File(base, fileName);
     }
     final Source source = Sources.of(file);
-    final RelProtoDataType protoRowType =
-        rowType != null ? RelDataTypeImpl.proto(rowType) : null;
+    final RelProtoDataType protoRowType = rowType != null ? RelDataTypeImpl.proto(rowType) : null;
     return new CsvStreamScannableTable(source, protoRowType);
   }
 }

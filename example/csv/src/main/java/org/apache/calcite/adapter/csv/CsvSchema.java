@@ -40,8 +40,8 @@ public class CsvSchema extends AbstractSchema {
    * Creates a CSV schema.
    *
    * @param directoryFile Directory that holds {@code .csv} files
-   * @param flavor     Whether to instantiate flavor tables that undergo
-   *                   query optimization
+   * @param flavor Whether to instantiate flavor tables that undergo
+   * query optimization
    */
   public CsvSchema(File directoryFile, CsvTable.Flavor flavor) {
     super();
@@ -49,24 +49,27 @@ public class CsvSchema extends AbstractSchema {
     this.flavor = flavor;
   }
 
-  /** Looks for a suffix on a string and returns
+  /**
+   * Looks for a suffix on a string and returns
    * either the string with the suffix removed
-   * or the original string. */
+   * or the original string.
+   */
   private static String trim(String s, String suffix) {
     String trimmed = trimOrNull(s, suffix);
     return trimmed != null ? trimmed : s;
   }
 
-  /** Looks for a suffix on a string and returns
+  /**
+   * Looks for a suffix on a string and returns
    * either the string with the suffix removed
-   * or null. */
+   * or null.
+   */
   private static String trimOrNull(String s, String suffix) {
-    return s.endsWith(suffix)
-        ? s.substring(0, s.length() - suffix.length())
-        : null;
+    return s.endsWith(suffix) ? s.substring(0, s.length() - suffix.length()) : null;
   }
 
-  @Override protected Map<String, Table> getTableMap() {
+  @Override
+  protected Map<String, Table> getTableMap() {
     if (tableMap == null) {
       tableMap = createTableMap();
     }
@@ -79,8 +82,7 @@ public class CsvSchema extends AbstractSchema {
     final Source baseSource = Sources.of(directoryFile);
     File[] files = directoryFile.listFiles((dir, name) -> {
       final String nameSansGz = trim(name, ".gz");
-      return nameSansGz.endsWith(".csv")
-          || nameSansGz.endsWith(".json");
+      return nameSansGz.endsWith(".csv") || nameSansGz.endsWith(".json");
     });
     if (files == null) {
       System.out.println("directory " + directoryFile + " not found");
@@ -105,7 +107,9 @@ public class CsvSchema extends AbstractSchema {
     return builder.build();
   }
 
-  /** Creates different sub-type of table based on the "flavor" attribute. */
+  /**
+   * Creates different sub-type of table based on the "flavor" attribute.
+   */
   private Table createTable(Source source) {
     switch (flavor) {
     case TRANSLATABLE:

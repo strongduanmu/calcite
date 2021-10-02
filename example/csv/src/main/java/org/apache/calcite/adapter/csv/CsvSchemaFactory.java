@@ -33,17 +33,18 @@ import java.util.Map;
  */
 @SuppressWarnings("UnusedDeclaration")
 public class CsvSchemaFactory implements SchemaFactory {
-  /** Public singleton, per factory contract. */
+  /**
+   * Public singleton, per factory contract.
+   */
   public static final CsvSchemaFactory INSTANCE = new CsvSchemaFactory();
 
   private CsvSchemaFactory() {
   }
 
-  @Override public Schema create(SchemaPlus parentSchema, String name,
-      Map<String, Object> operand) {
+  @Override
+  public Schema create(SchemaPlus parentSchema, String name, Map<String, Object> operand) {
     final String directory = (String) operand.get("directory");
-    final File base =
-        (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
+    final File base = (File) operand.get(ModelHandler.ExtraOperand.BASE_DIRECTORY.camelName);
     File directoryFile = new File(directory);
     if (base != null && !directoryFile.isAbsolute()) {
       directoryFile = new File(base, directory);

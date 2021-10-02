@@ -39,39 +39,47 @@ public abstract class CsvTable extends AbstractTable {
   private @Nullable RelDataType rowType;
   private @Nullable List<CsvFieldType> fieldTypes;
 
-  /** Creates a CsvTable. */
+  /**
+   * Creates a CsvTable.
+   */
   CsvTable(Source source, @Nullable RelProtoDataType protoRowType) {
     this.source = source;
     this.protoRowType = protoRowType;
   }
 
-  @Override public RelDataType getRowType(RelDataTypeFactory typeFactory) {
+  @Override
+  public RelDataType getRowType(RelDataTypeFactory typeFactory) {
     if (protoRowType != null) {
       return protoRowType.apply(typeFactory);
     }
     if (rowType == null) {
-      rowType = CsvEnumerator.deduceRowType((JavaTypeFactory) typeFactory, source,
-          null, isStream());
+      rowType = CsvEnumerator.deduceRowType((JavaTypeFactory) typeFactory, source, null,
+          isStream());
     }
     return rowType;
   }
 
-  /** Returns the field types of this CSV table. */
+  /**
+   * Returns the field types of this CSV table.
+   */
   public List<CsvFieldType> getFieldTypes(RelDataTypeFactory typeFactory) {
     if (fieldTypes == null) {
       fieldTypes = new ArrayList<>();
-      CsvEnumerator.deduceRowType((JavaTypeFactory) typeFactory, source,
-          fieldTypes, isStream());
+      CsvEnumerator.deduceRowType((JavaTypeFactory) typeFactory, source, fieldTypes, isStream());
     }
     return fieldTypes;
   }
 
-  /** Returns whether the table represents a stream. */
+  /**
+   * Returns whether the table represents a stream.
+   */
   protected boolean isStream() {
     return false;
   }
 
-  /** Various degrees of table "intelligence". */
+  /**
+   * Various degrees of table "intelligence".
+   */
   public enum Flavor {
     SCANNABLE, FILTERABLE, TRANSLATABLE
   }

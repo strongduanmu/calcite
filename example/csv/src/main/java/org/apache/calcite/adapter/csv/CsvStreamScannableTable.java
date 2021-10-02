@@ -41,35 +41,41 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>It implements the {@link ScannableTable} interface, so Calcite gets
  * data by calling the {@link #scan(DataContext)} method.
  */
-public class CsvStreamScannableTable extends CsvScannableTable
-    implements StreamableTable {
-  /** Creates a CsvScannableTable. */
+public class CsvStreamScannableTable extends CsvScannableTable implements StreamableTable {
+  /**
+   * Creates a CsvScannableTable.
+   */
   CsvStreamScannableTable(Source source, RelProtoDataType protoRowType) {
     super(source, protoRowType);
   }
 
-  @Override protected boolean isStream() {
+  @Override
+  protected boolean isStream() {
     return true;
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "CsvStreamScannableTable";
   }
 
-  @Override public Enumerable<@Nullable Object[]> scan(DataContext root) {
+  @Override
+  public Enumerable<@Nullable Object[]> scan(DataContext root) {
     JavaTypeFactory typeFactory = root.getTypeFactory();
     final List<CsvFieldType> fieldTypes = getFieldTypes(typeFactory);
     final List<Integer> fields = ImmutableIntList.identity(fieldTypes.size());
     final AtomicBoolean cancelFlag = DataContext.Variable.CANCEL_FLAG.get(root);
     return new AbstractEnumerable<@Nullable Object[]>() {
-      @Override public Enumerator<@Nullable Object[]> enumerator() {
+      @Override
+      public Enumerator<@Nullable Object[]> enumerator() {
         return new CsvEnumerator<>(source, cancelFlag, true, null,
             CsvEnumerator.arrayConverter(fieldTypes, fields, true));
       }
     };
   }
 
-  @Override public Table stream() {
+  @Override
+  public Table stream() {
     return this;
   }
 }

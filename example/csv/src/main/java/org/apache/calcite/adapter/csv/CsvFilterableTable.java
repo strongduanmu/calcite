@@ -44,18 +44,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>It implements the {@link FilterableTable} interface, so Calcite gets
  * data by calling the {@link #scan(DataContext, List)} method.
  */
-public class CsvFilterableTable extends CsvTable
-    implements FilterableTable {
-  /** Creates a CsvFilterableTable. */
+public class CsvFilterableTable extends CsvTable implements FilterableTable {
+  /**
+   * Creates a CsvFilterableTable.
+   */
   public CsvFilterableTable(Source source, RelProtoDataType protoRowType) {
     super(source, protoRowType);
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "CsvFilterableTable";
   }
 
-  @Override public Enumerable<@Nullable Object[]> scan(DataContext root, List<RexNode> filters) {
+  @Override
+  public Enumerable<@Nullable Object[]> scan(DataContext root, List<RexNode> filters) {
     JavaTypeFactory typeFactory = root.getTypeFactory();
     final List<CsvFieldType> fieldTypes = getFieldTypes(typeFactory);
     final @Nullable String[] filterValues = new String[fieldTypes.size()];
@@ -63,7 +66,8 @@ public class CsvFilterableTable extends CsvTable
     final List<Integer> fields = ImmutableIntList.identity(fieldTypes.size());
     final AtomicBoolean cancelFlag = DataContext.Variable.CANCEL_FLAG.get(root);
     return new AbstractEnumerable<@Nullable Object[]>() {
-      @Override public Enumerator<@Nullable Object[]> enumerator() {
+      @Override
+      public Enumerator<@Nullable Object[]> enumerator() {
         return new CsvEnumerator<>(source, cancelFlag, false, filterValues,
             CsvEnumerator.arrayConverter(fieldTypes, fields, false));
       }
@@ -72,8 +76,8 @@ public class CsvFilterableTable extends CsvTable
 
   private static boolean addFilter(RexNode filter, @Nullable Object[] filterValues) {
     if (filter.isA(SqlKind.AND)) {
-        // We cannot refine(remove) the operands of AND,
-        // it will cause o.a.c.i.TableScanNode.createFilterable filters check failed.
+      // We cannot refine(remove) the operands of AND,
+      // it will cause o.a.c.i.TableScanNode.createFilterable filters check failed.
       ((RexCall) filter).getOperands().forEach(subFilter -> addFilter(subFilter, filterValues));
     } else if (filter.isA(SqlKind.EQUALS)) {
       final RexCall call = (RexCall) filter;
@@ -82,8 +86,7 @@ public class CsvFilterableTable extends CsvTable
         left = ((RexCall) left).operands.get(0);
       }
       final RexNode right = call.getOperands().get(1);
-      if (left instanceof RexInputRef
-          && right instanceof RexLiteral) {
+      if (left instanceof RexInputRef && right instanceof RexLiteral) {
         final int index = ((RexInputRef) left).getIndex();
         if (filterValues[index] == null) {
           filterValues[index] = ((RexLiteral) right).getValue2().toString();

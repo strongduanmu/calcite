@@ -53,8 +53,8 @@ public class CsvTableScan extends TableScan implements EnumerableRel {
   final CsvTranslatableTable csvTable;
   final int[] fields;
 
-  protected CsvTableScan(RelOptCluster cluster, RelOptTable table,
-      CsvTranslatableTable csvTable, int[] fields) {
+  protected CsvTableScan(RelOptCluster cluster, RelOptTable table, CsvTranslatableTable csvTable,
+      int[] fields) {
     super(cluster, cluster.traitSetOf(EnumerableConvention.INSTANCE), ImmutableList.of(), table);
     this.csvTable = csvTable;
     this.fields = fields;
@@ -62,32 +62,34 @@ public class CsvTableScan extends TableScan implements EnumerableRel {
     assert csvTable != null;
   }
 
-  @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+  @Override
+  public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
     assert inputs.isEmpty();
     return new CsvTableScan(getCluster(), table, csvTable, fields);
   }
 
-  @Override public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw)
-        .item("fields", Primitive.asList(fields));
+  @Override
+  public RelWriter explainTerms(RelWriter pw) {
+    return super.explainTerms(pw).item("fields", Primitive.asList(fields));
   }
 
-  @Override public RelDataType deriveRowType() {
+  @Override
+  public RelDataType deriveRowType() {
     final List<RelDataTypeField> fieldList = table.getRowType().getFieldList();
-    final RelDataTypeFactory.Builder builder =
-        getCluster().getTypeFactory().builder();
+    final RelDataTypeFactory.Builder builder = getCluster().getTypeFactory().builder();
     for (int field : fields) {
       builder.add(fieldList.get(field));
     }
     return builder.build();
   }
 
-  @Override public void register(RelOptPlanner planner) {
+  @Override
+  public void register(RelOptPlanner planner) {
     planner.addRule(CsvRules.PROJECT_SCAN);
   }
 
-  @Override public @Nullable RelOptCost computeSelfCost(RelOptPlanner planner,
-      RelMetadataQuery mq) {
+  @Override
+  public @Nullable RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
     // Multiply the cost by a factor that makes a scan more attractive if it
     // has significantly fewer fields than the original scan.
     //
@@ -95,30 +97,20 @@ public class CsvTableScan extends TableScan implements EnumerableRel {
     //
     // For example, if table has 3 fields, project has 1 field,
     // then factor = (1 + 2) / (3 + 2) = 0.6
-    return super.computeSelfCost(planner, mq)
-        .multiplyBy(((double) fields.length + 2D)
-            / ((double) table.getRowType().getFieldCount() + 2D));
+    return super.computeSelfCost(planner, mq).multiplyBy(((double) fields.length + 2D) / ((double) table.getRowType().getFieldCount() + 2D));
   }
 
-  @Override public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
-    PhysType physType =
-        PhysTypeImpl.of(
-            implementor.getTypeFactory(),
-            getRowType(),
-            pref.preferArray());
+  @Override
+  public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+    PhysType physType = PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(),
+        pref.preferArray());
 
     if (table instanceof JsonTable) {
-      return implementor.result(
-          physType,
-          Blocks.toBlock(
-              Expressions.call(table.getExpression(JsonTable.class),
-                  "enumerable")));
+      return implementor.result(physType,
+          Blocks.toBlock(Expressions.call(table.getExpression(JsonTable.class), "enumerable")));
     }
-    return implementor.result(
-        physType,
-        Blocks.toBlock(
-            Expressions.call(table.getExpression(CsvTranslatableTable.class),
-                "project", implementor.getRootExpression(),
-                Expressions.constant(fields))));
+    return implementor.result(physType,
+        Blocks.toBlock(Expressions.call(table.getExpression(CsvTranslatableTable.class), "project"
+            , implementor.getRootExpression(), Expressions.constant(fields))));
   }
 }

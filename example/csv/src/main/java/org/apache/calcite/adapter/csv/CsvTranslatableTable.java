@@ -41,51 +41,53 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * Table based on a CSV file.
  */
-public class CsvTranslatableTable extends CsvTable
-    implements QueryableTable, TranslatableTable {
-  /** Creates a CsvTable. */
+public class CsvTranslatableTable extends CsvTable implements QueryableTable, TranslatableTable {
+  /**
+   * Creates a CsvTable.
+   */
   CsvTranslatableTable(Source source, RelProtoDataType protoRowType) {
     super(source, protoRowType);
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "CsvTranslatableTable";
   }
 
-  /** Returns an enumerable over a given projection of the fields. */
+  /**
+   * Returns an enumerable over a given projection of the fields.
+   */
   @SuppressWarnings("unused") // called from generated code
-  public Enumerable<Object> project(final DataContext root,
-      final int[] fields) {
+  public Enumerable<Object> project(final DataContext root, final int[] fields) {
     final AtomicBoolean cancelFlag = DataContext.Variable.CANCEL_FLAG.get(root);
     return new AbstractEnumerable<Object>() {
-      @Override public Enumerator<Object> enumerator() {
+      @Override
+      public Enumerator<Object> enumerator() {
         JavaTypeFactory typeFactory = root.getTypeFactory();
-        return new CsvEnumerator<>(
-            source,
-            cancelFlag,
-            getFieldTypes(typeFactory),
+        return new CsvEnumerator<>(source, cancelFlag, getFieldTypes(typeFactory),
             ImmutableIntList.of(fields));
       }
     };
   }
 
-  @Override public Expression getExpression(SchemaPlus schema, String tableName,
-      Class clazz) {
+  @Override
+  public Expression getExpression(SchemaPlus schema, String tableName, Class clazz) {
     return Schemas.tableExpression(schema, getElementType(), tableName, clazz);
   }
 
-  @Override public Type getElementType() {
+  @Override
+  public Type getElementType() {
     return Object[].class;
   }
 
-  @Override public <T> Queryable<T> asQueryable(QueryProvider queryProvider,
-      SchemaPlus schema, String tableName) {
+  @Override
+  public <T> Queryable<T> asQueryable(QueryProvider queryProvider, SchemaPlus schema,
+      String tableName) {
     throw new UnsupportedOperationException();
   }
 
-  @Override public RelNode toRel(
-      RelOptTable.ToRelContext context,
-      RelOptTable relOptTable) {
+  @Override
+  public RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable) {
     // Request all fields.
     final int fieldCount = relOptTable.getRowType().getFieldCount();
     final int[] fields = CsvEnumerator.identityList(fieldCount);

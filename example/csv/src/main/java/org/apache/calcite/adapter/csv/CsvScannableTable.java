@@ -39,24 +39,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * <p>It implements the {@link ScannableTable} interface, so Calcite gets
  * data by calling the {@link #scan(DataContext)} method.
  */
-public class CsvScannableTable extends CsvTable
-    implements ScannableTable {
-  /** Creates a CsvScannableTable. */
+public class CsvScannableTable extends CsvTable implements ScannableTable {
+  /**
+   * Creates a CsvScannableTable.
+   */
   CsvScannableTable(Source source, RelProtoDataType protoRowType) {
     super(source, protoRowType);
   }
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return "CsvScannableTable";
   }
 
-  @Override public Enumerable<@Nullable Object[]> scan(DataContext root) {
+  @Override
+  public Enumerable<@Nullable Object[]> scan(DataContext root) {
     JavaTypeFactory typeFactory = root.getTypeFactory();
     final List<CsvFieldType> fieldTypes = getFieldTypes(typeFactory);
     final List<Integer> fields = ImmutableIntList.identity(fieldTypes.size());
     final AtomicBoolean cancelFlag = DataContext.Variable.CANCEL_FLAG.get(root);
     return new AbstractEnumerable<@Nullable Object[]>() {
-      @Override public Enumerator<@Nullable Object[]> enumerator() {
+      @Override
+      public Enumerator<@Nullable Object[]> enumerator() {
         return new CsvEnumerator<>(source, cancelFlag, false, null,
             CsvEnumerator.arrayConverter(fieldTypes, fields, false));
       }
