@@ -50,8 +50,7 @@ import java.util.Set;
 /**
  * Relational operator that returns the contents of a table.
  */
-public abstract class TableScan
-    extends AbstractRelNode implements Hintable {
+public abstract class TableScan extends AbstractRelNode implements Hintable {
   //~ Instance fields --------------------------------------------------------
 
   /**
@@ -66,8 +65,8 @@ public abstract class TableScan
 
   //~ Constructors -----------------------------------------------------------
 
-  protected TableScan(RelOptCluster cluster, RelTraitSet traitSet,
-      List<RelHint> hints, RelOptTable table) {
+  protected TableScan(RelOptCluster cluster, RelTraitSet traitSet, List<RelHint> hints,
+      RelOptTable table) {
     super(cluster, traitSet);
     this.table = Objects.requireNonNull(table, "table");
     RelOptSchema relOptSchema = table.getRelOptSchema();
@@ -78,8 +77,7 @@ public abstract class TableScan
   }
 
   @Deprecated // to be removed before 2.0
-  protected TableScan(RelOptCluster cluster, RelTraitSet traitSet,
-      RelOptTable table) {
+  protected TableScan(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table) {
     this(cluster, traitSet, ImmutableList.of(), table);
   }
 
@@ -92,39 +90,46 @@ public abstract class TableScan
 
   //~ Methods ----------------------------------------------------------------
 
-  @Override public double estimateRowCount(RelMetadataQuery mq) {
+  @Override
+  public double estimateRowCount(RelMetadataQuery mq) {
     return table.getRowCount();
   }
 
-  @Override public RelOptTable getTable() {
+  @Override
+  public RelOptTable getTable() {
     return table;
   }
 
-  @Override public @Nullable RelOptCost computeSelfCost(RelOptPlanner planner,
-      RelMetadataQuery mq) {
+  @Override
+  public @Nullable RelOptCost computeSelfCost(RelOptPlanner planner, RelMetadataQuery mq) {
     double dRows = table.getRowCount();
     double dCpu = dRows + 1; // ensure non-zero cost
     double dIo = 0;
     return planner.getCostFactory().makeCost(dRows, dCpu, dIo);
   }
 
-  @Override public RelDataType deriveRowType() {
+  @Override
+  public RelDataType deriveRowType() {
     return table.getRowType();
   }
 
-  /** Returns an identity projection for the given table. */
+  /**
+   * Returns an identity projection for the given table.
+   */
   public static ImmutableIntList identity(RelOptTable table) {
     return ImmutableIntList.identity(table.getRowType().getFieldCount());
   }
 
-  /** Returns an identity projection. */
+  /**
+   * Returns an identity projection.
+   */
   public ImmutableIntList identity() {
     return identity(table);
   }
 
-  @Override public RelWriter explainTerms(RelWriter pw) {
-    return super.explainTerms(pw)
-        .item("table", table.getQualifiedName());
+  @Override
+  public RelWriter explainTerms(RelWriter pw) {
+    return super.explainTerms(pw).item("table", table.getQualifiedName());
   }
 
   /**
@@ -139,18 +144,16 @@ public abstract class TableScan
    * <p>Sub-classes, representing table types that have these capabilities,
    * should override.</p>
    *
-   * @param fieldsUsed  Bitmap of the fields desired by the consumer
+   * @param fieldsUsed Bitmap of the fields desired by the consumer
    * @param extraFields Extra fields, not advertised in the table's row-type,
-   *                    wanted by the consumer
+   * wanted by the consumer
    * @param relBuilder Builder used to create a Project
    * @return Relational expression that projects the desired fields
    */
-  public RelNode project(ImmutableBitSet fieldsUsed,
-      Set<RelDataTypeField> extraFields,
+  public RelNode project(ImmutableBitSet fieldsUsed, Set<RelDataTypeField> extraFields,
       RelBuilder relBuilder) {
     final int fieldCount = getRowType().getFieldCount();
-    if (fieldsUsed.equals(ImmutableBitSet.range(fieldCount))
-        && extraFields.isEmpty()) {
+    if (fieldsUsed.equals(ImmutableBitSet.range(fieldCount)) && extraFields.isEmpty()) {
       return this;
     }
     int fieldSize = fieldsUsed.size() + extraFields.size();
@@ -176,11 +179,13 @@ public abstract class TableScan
     return relBuilder.push(this).project(exprList, nameList).build();
   }
 
-  @Override public RelNode accept(RelShuttle shuttle) {
+  @Override
+  public RelNode accept(RelShuttle shuttle) {
     return shuttle.visit(this);
   }
 
-  @Override public ImmutableList<RelHint> getHints() {
+  @Override
+  public ImmutableList<RelHint> getHints() {
     return hints;
   }
 }

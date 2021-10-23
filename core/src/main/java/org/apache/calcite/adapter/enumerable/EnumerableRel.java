@@ -31,22 +31,23 @@ import java.util.List;
  * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention} calling
  * conventions.
  */
-public interface EnumerableRel
-    extends PhysicalNode {
+public interface EnumerableRel extends PhysicalNode {
 
   //~ Methods ----------------------------------------------------------------
 
-  @Override default @Nullable Pair<RelTraitSet, List<RelTraitSet>> passThroughTraits(
-      RelTraitSet required) {
+  @Override
+  default @Nullable Pair<RelTraitSet, List<RelTraitSet>> passThroughTraits(RelTraitSet required) {
     return null;
   }
 
-  @Override default @Nullable Pair<RelTraitSet, List<RelTraitSet>> deriveTraits(
-      RelTraitSet childTraits, int childId) {
+  @Override
+  default @Nullable Pair<RelTraitSet, List<RelTraitSet>> deriveTraits(RelTraitSet childTraits,
+      int childId) {
     return null;
   }
 
-  @Override default DeriveMode getDeriveMode() {
+  @Override
+  default DeriveMode getDeriveMode() {
     return DeriveMode.LEFT_FIRST;
   }
 
@@ -59,19 +60,31 @@ public interface EnumerableRel
    */
   Result implement(EnumerableRelImplementor implementor, Prefer pref);
 
-  /** Preferred physical type. */
+  /**
+   * Preferred physical type.
+   */
   enum Prefer {
-    /** Records must be represented as arrays. */
+    /**
+     * Records must be represented as arrays.
+     */
     ARRAY,
-    /** Consumer would prefer that records are represented as arrays, but can
-     * accommodate records represented as objects. */
+    /**
+     * Consumer would prefer that records are represented as arrays, but can
+     * accommodate records represented as objects.
+     */
     ARRAY_NICE,
-    /** Records must be represented as objects. */
+    /**
+     * Records must be represented as objects.
+     */
     CUSTOM,
-    /** Consumer would prefer that records are represented as objects, but can
-     * accommodate records represented as arrays. */
+    /**
+     * Consumer would prefer that records are represented as objects, but can
+     * accommodate records represented as arrays.
+     */
     CUSTOM_NICE,
-    /** Consumer has no preferred representation. */
+    /**
+     * Consumer has no preferred representation.
+     */
     ANY;
 
     public JavaRowFormat preferCustom() {
@@ -103,8 +116,10 @@ public interface EnumerableRel
     }
   }
 
-  /** Result of implementing an enumerable relational expression by generating
-   * Java code. */
+  /**
+   * Result of implementing an enumerable relational expression by generating
+   * Java code.
+   */
   class Result {
     public final BlockStatement block;
 
@@ -115,8 +130,7 @@ public interface EnumerableRel
     public final PhysType physType;
     public final JavaRowFormat format;
 
-    public Result(BlockStatement block, PhysType physType,
-        JavaRowFormat format) {
+    public Result(BlockStatement block, PhysType physType, JavaRowFormat format) {
       this.block = block;
       this.physType = physType;
       this.format = format;

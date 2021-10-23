@@ -31,8 +31,8 @@ import org.apache.calcite.rel.RelNode;
  * on that particular subclass of RelNode.
  */
 public interface TranslatableTable extends Table {
-  /** Converts this table into a {@link RelNode relational expression}. */
-  RelNode toRel(
-      RelOptTable.ToRelContext context,
-      RelOptTable relOptTable);
+  /**
+   * Converts this table into a {@link RelNode relational expression}.
+   */
+  RelNode toRel(RelOptTable.ToRelContext context, RelOptTable relOptTable);
 }

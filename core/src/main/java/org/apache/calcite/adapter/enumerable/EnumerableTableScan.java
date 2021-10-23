@@ -61,23 +61,25 @@ import static org.apache.calcite.linq4j.tree.Types.toClass;
 
 import static java.util.Objects.requireNonNull;
 
-/** Implementation of {@link org.apache.calcite.rel.core.TableScan} in
- * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}. */
-public class EnumerableTableScan
-    extends TableScan
-    implements EnumerableRel {
+/**
+ * Implementation of {@link org.apache.calcite.rel.core.TableScan} in
+ * {@link org.apache.calcite.adapter.enumerable.EnumerableConvention enumerable calling convention}.
+ */
+public class EnumerableTableScan extends TableScan implements EnumerableRel {
   private final Class elementType;
 
-  /** Creates an EnumerableTableScan.
+  /**
+   * Creates an EnumerableTableScan.
    *
-   * <p>Use {@link #create} unless you know what you are doing. */
-  public EnumerableTableScan(RelOptCluster cluster, RelTraitSet traitSet,
-      RelOptTable table, Class elementType) {
+   * <p>Use {@link #create} unless you know what you are doing.
+   */
+  public EnumerableTableScan(RelOptCluster cluster, RelTraitSet traitSet, RelOptTable table,
+      Class elementType) {
     super(cluster, traitSet, ImmutableList.of(), table);
     assert getConvention() instanceof EnumerableConvention;
     this.elementType = elementType;
-    assert canHandle(table)
-        : "EnumerableTableScan can't implement " + table + ", see EnumerableTableScan#canHandle";
+    assert canHandle(table) : "EnumerableTableScan can't implement " + table + ", see " +
+        "EnumerableTableScan#canHandle";
   }
 
   /**
@@ -86,7 +88,8 @@ public class EnumerableTableScan
    *
    * @return IndexScan if there is index available on collation keys
    */
-  @Override public @Nullable RelNode passThrough(final RelTraitSet required) {
+  @Override
+  public @Nullable RelNode passThrough(final RelTraitSet required) {
 /*
     keys = required.getCollation().getKeys();
     if (table has index on keys) {
@@ -97,28 +100,31 @@ public class EnumerableTableScan
     return null;
   }
 
-  @Override public DeriveMode getDeriveMode() {
+  @Override
+  public DeriveMode getDeriveMode() {
     return DeriveMode.PROHIBITED;
   }
 
-  /** Creates an EnumerableTableScan. */
-  public static EnumerableTableScan create(RelOptCluster cluster,
-      RelOptTable relOptTable) {
+  /**
+   * Creates an EnumerableTableScan.
+   */
+  public static EnumerableTableScan create(RelOptCluster cluster, RelOptTable relOptTable) {
     final Table table = relOptTable.unwrap(Table.class);
     Class elementType = EnumerableTableScan.deduceElementType(table);
     final RelTraitSet traitSet =
-        cluster.traitSetOf(EnumerableConvention.INSTANCE)
-            .replaceIfs(RelCollationTraitDef.INSTANCE, () -> {
-              if (table != null) {
-                return table.getStatistic().getCollations();
-              }
-              return ImmutableList.of();
-            });
+        cluster.traitSetOf(EnumerableConvention.INSTANCE).replaceIfs(RelCollationTraitDef.INSTANCE, () -> {
+      if (table != null) {
+        return table.getStatistic().getCollations();
+      }
+      return ImmutableList.of();
+    });
     return new EnumerableTableScan(cluster, traitSet, relOptTable, elementType);
   }
 
-  /** Returns whether EnumerableTableScan can generate code to handle a
+  /**
+   * Returns whether EnumerableTableScan can generate code to handle a
    * particular variant of the Table SPI.
+   *
    * @deprecated remove before Calcite 2.0
    **/
   @Deprecated
@@ -128,13 +134,11 @@ public class EnumerableTableScan
       return false;
     }
     // See org.apache.calcite.prepare.RelOptTableImpl.getClassExpressionFunction
-    return table instanceof QueryableTable
-        || table instanceof FilterableTable
-        || table instanceof ProjectableFilterableTable
-        || table instanceof ScannableTable;
+    return table instanceof QueryableTable || table instanceof FilterableTable || table instanceof ProjectableFilterableTable || table instanceof ScannableTable;
   }
 
-  /** Returns whether EnumerableTableScan can generate code to handle a
+  /**
+   * Returns whether EnumerableTableScan can generate code to handle a
    * particular variant of the Table SPI.
    **/
   public static boolean canHandle(RelOptTable relOptTable) {
@@ -180,10 +184,7 @@ public class EnumerableTableScan
       } else {
         return Object[].class;
       }
-    } else if (table instanceof ScannableTable
-        || table instanceof FilterableTable
-        || table instanceof ProjectableFilterableTable
-        || table instanceof StreamableTable) {
+    } else if (table instanceof ScannableTable || table instanceof FilterableTable || table instanceof ProjectableFilterableTable || table instanceof StreamableTable) {
       return Object[].class;
     } else {
       return Object.class;
@@ -192,17 +193,15 @@ public class EnumerableTableScan
 
   public static JavaRowFormat deduceFormat(RelOptTable table) {
     final Class elementType = deduceElementType(table.unwrapOrThrow(Table.class));
-    return elementType == Object[].class
-        ? JavaRowFormat.ARRAY
-        : JavaRowFormat.CUSTOM;
+    return elementType == Object[].class ? JavaRowFormat.ARRAY : JavaRowFormat.CUSTOM;
   }
 
   private Expression getExpression(PhysType physType) {
     final Expression expression = table.getExpression(Queryable.class);
     if (expression == null) {
-      throw new IllegalStateException(
-          "Unable to implement " + RelOptUtil.toString(this, SqlExplainLevel.ALL_ATTRIBUTES)
-          + ": " + table + ".getExpression(Queryable.class) returned null");
+      throw new IllegalStateException("Unable to implement " + RelOptUtil.toString(this,
+          SqlExplainLevel.ALL_ATTRIBUTES) + ": " + table + ".getExpression(Queryable.class) " +
+          "returned null");
     }
     final Expression expression2 = toEnumerable(expression);
     assert Types.isAssignableFrom(Enumerable.class, expression2.getType());
@@ -213,72 +212,56 @@ public class EnumerableTableScan
     final Type type = expression.getType();
     if (Types.isArray(type)) {
       if (requireNonNull(toClass(type).getComponentType()).isPrimitive()) {
-        expression =
-            Expressions.call(BuiltInMethod.AS_LIST.method, expression);
+        expression = Expressions.call(BuiltInMethod.AS_LIST.method, expression);
       }
       return Expressions.call(BuiltInMethod.AS_ENUMERABLE.method, expression);
-    } else if (Types.isAssignableFrom(Iterable.class, type)
-        && !Types.isAssignableFrom(Enumerable.class, type)) {
-      return Expressions.call(BuiltInMethod.AS_ENUMERABLE2.method,
-          expression);
+    } else if (Types.isAssignableFrom(Iterable.class, type) && !Types.isAssignableFrom(Enumerable.class, type)) {
+      return Expressions.call(BuiltInMethod.AS_ENUMERABLE2.method, expression);
     } else if (Types.isAssignableFrom(Queryable.class, type)) {
       // Queryable extends Enumerable, but it's too "clever", so we call
       // Queryable.asEnumerable so that operations such as take(int) will be
       // evaluated directly.
-      return Expressions.call(expression,
-          BuiltInMethod.QUERYABLE_AS_ENUMERABLE.method);
+      return Expressions.call(expression, BuiltInMethod.QUERYABLE_AS_ENUMERABLE.method);
     }
     return expression;
   }
 
   private Expression toRows(PhysType physType, Expression expression) {
-    if (physType.getFormat() == JavaRowFormat.SCALAR
-        && Object[].class.isAssignableFrom(elementType)
-        && getRowType().getFieldCount() == 1
-        && (table.unwrap(ScannableTable.class) != null
-            || table.unwrap(FilterableTable.class) != null
-            || table.unwrap(ProjectableFilterableTable.class) != null)) {
+    if (physType.getFormat() == JavaRowFormat.SCALAR && Object[].class.isAssignableFrom(elementType) && getRowType().getFieldCount() == 1 && (table.unwrap(ScannableTable.class) != null || table.unwrap(FilterableTable.class) != null || table.unwrap(ProjectableFilterableTable.class) != null)) {
       return Expressions.call(BuiltInMethod.SLICE0.method, expression);
     }
     JavaRowFormat oldFormat = format();
     if (physType.getFormat() == oldFormat && !hasCollectionField(getRowType())) {
       return expression;
     }
-    final ParameterExpression row_ =
-        Expressions.parameter(elementType, "row");
+    final ParameterExpression row_ = Expressions.parameter(elementType, "row");
     final int fieldCount = table.getRowType().getFieldCount();
     List<Expression> expressionList = new ArrayList<>(fieldCount);
     for (int i = 0; i < fieldCount; i++) {
       expressionList.add(fieldExpression(row_, i, physType, oldFormat));
     }
-    return Expressions.call(expression,
-        BuiltInMethod.SELECT.method,
-        Expressions.lambda(Function1.class, physType.record(expressionList),
-            row_));
+    return Expressions.call(expression, BuiltInMethod.SELECT.method,
+        Expressions.lambda(Function1.class, physType.record(expressionList), row_));
   }
 
-  private Expression fieldExpression(ParameterExpression row_, int i,
-      PhysType physType, JavaRowFormat format) {
-    final Expression e =
-        format.field(row_, i, null, physType.getJavaFieldType(i));
-    final RelDataType relFieldType =
-        physType.getRowType().getFieldList().get(i).getType();
+  private Expression fieldExpression(ParameterExpression row_, int i, PhysType physType,
+      JavaRowFormat format) {
+    final Expression e = format.field(row_, i, null, physType.getJavaFieldType(i));
+    final RelDataType relFieldType = physType.getRowType().getFieldList().get(i).getType();
     switch (relFieldType.getSqlTypeName()) {
     case ARRAY:
     case MULTISET:
-      final RelDataType fieldType = requireNonNull(relFieldType.getComponentType(),
-          () -> "relFieldType.getComponentType() for " + relFieldType);
+      final RelDataType fieldType = requireNonNull(relFieldType.getComponentType(), () ->
+          "relFieldType.getComponentType() for " + relFieldType);
       if (fieldType.isStruct()) {
         // We can't represent a multiset or array as a List<Employee>, because
         // the consumer does not know the element type.
         // The standard element type is List.
         // We need to convert to a List<List>.
-        final JavaTypeFactory typeFactory =
-                (JavaTypeFactory) getCluster().getTypeFactory();
-        final PhysType elementPhysType = PhysTypeImpl.of(
-                typeFactory, fieldType, JavaRowFormat.CUSTOM);
-        final MethodCallExpression e2 =
-                Expressions.call(BuiltInMethod.AS_ENUMERABLE2.method, e);
+        final JavaTypeFactory typeFactory = (JavaTypeFactory) getCluster().getTypeFactory();
+        final PhysType elementPhysType = PhysTypeImpl.of(typeFactory, fieldType,
+            JavaRowFormat.CUSTOM);
+        final MethodCallExpression e2 = Expressions.call(BuiltInMethod.AS_ENUMERABLE2.method, e);
         final Expression e3 = elementPhysType.convertTo(e2, JavaRowFormat.LIST);
         return Expressions.call(e3, BuiltInMethod.ENUMERABLE_TO_LIST.method);
       } else {
@@ -300,10 +283,7 @@ public class EnumerableTableScan
     if (Row.class.isAssignableFrom(elementType)) {
       return JavaRowFormat.ROW;
     }
-    if (fieldCount == 1 && (Object.class == elementType
-          || Primitive.is(elementType)
-          || Number.class.isAssignableFrom(elementType)
-          || String.class == elementType)) {
+    if (fieldCount == 1 && (Object.class == elementType || Primitive.is(elementType) || Number.class.isAssignableFrom(elementType) || String.class == elementType)) {
       return JavaRowFormat.SCALAR;
     }
     return JavaRowFormat.CUSTOM;
@@ -322,21 +302,19 @@ public class EnumerableTableScan
     return false;
   }
 
-  @Override public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+  @Override
+  public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
     return new EnumerableTableScan(getCluster(), traitSet, table, elementType);
   }
 
-  @Override public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
+  @Override
+  public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
     // Note that representation is ARRAY. This assumes that the table
     // returns a Object[] for each record. Actually a Table<T> can
     // return any type T. And, if it is a JdbcTable, we'd like to be
     // able to generate alternate accessors that return e.g. synthetic
     // records {T0 f0; T1 f1; ...} and don't box every primitive value.
-    final PhysType physType =
-        PhysTypeImpl.of(
-            implementor.getTypeFactory(),
-            getRowType(),
-            format());
+    final PhysType physType = PhysTypeImpl.of(implementor.getTypeFactory(), getRowType(), format());
     final Expression expression = getExpression(physType);
     return implementor.result(physType, Blocks.toBlock(expression));
   }

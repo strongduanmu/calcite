@@ -113,14 +113,15 @@ public interface RelNode extends RelOptNode, Cloneable {
   /**
    * Returns the type of the rows returned by this relational expression.
    */
-  @Override RelDataType getRowType();
+  @Override
+  RelDataType getRowType();
 
   /**
    * Returns the type of the rows expected for an input. Defaults to
    * {@link #getRowType}.
    *
    * @param ordinalInParent input's 0-based ordinal with respect to this
-   *                        parent rel
+   * parent rel
    * @return expected row type
    */
   RelDataType getExpectedInputRowType(int ordinalInParent);
@@ -131,7 +132,8 @@ public interface RelNode extends RelOptNode, Cloneable {
    *
    * @return Array of this relational expression's inputs
    */
-  @Override List<RelNode> getInputs();
+  @Override
+  List<RelNode> getInputs();
 
   /**
    * Returns an estimate of the number of rows this relational expression will
@@ -143,7 +145,7 @@ public interface RelNode extends RelOptNode, Cloneable {
    *
    * @param mq Metadata query
    * @return Estimate of the number of rows this relational expression will
-   *   return
+   * return
    */
   double estimateRowCount(RelMetadataQuery mq);
 
@@ -156,7 +158,7 @@ public interface RelNode extends RelOptNode, Cloneable {
    * variables.
    *
    * @return Names of variables which are set in this relational
-   *   expression
+   * expression
    */
   Set<CorrelationId> getVariablesSet();
 
@@ -184,7 +186,7 @@ public interface RelNode extends RelOptNode, Cloneable {
    * traverse the tree of relational expressions.
    *
    * @param visitor Visitor that will traverse the tree of relational
-   *                expressions
+   * expressions
    */
   void childrenAccept(RelVisitor visitor);
 
@@ -205,17 +207,16 @@ public interface RelNode extends RelOptNode, Cloneable {
   /**
    * Returns a metadata interface.
    *
-   * @deprecated Use {@link RelMetadataQuery} via {@link #getCluster()}.
-   *
    * @param <M> Type of metadata being requested
    * @param metadataClass Metadata interface
    * @param mq Metadata query
-   *
    * @return Metadata object that supplies the desired metadata (never null,
-   *     although if the information is not present the metadata object may
-   *     return null from all methods)
+   * although if the information is not present the metadata object may
+   * return null from all methods)
+   * @deprecated Use {@link RelMetadataQuery} via {@link #getCluster()}.
    */
-  @Deprecated // to be removed before 2.0
+  @Deprecated
+  // to be removed before 2.0
   <@Nullable M extends @Nullable Metadata> M metadata(Class<M> metadataClass, RelMetadataQuery mq);
 
   /**
@@ -234,7 +235,7 @@ public interface RelNode extends RelOptNode, Cloneable {
    * Returns a relational expression string of this {@code RelNode}.
    * The string returned is the same as
    * {@link RelOptUtil#toString(org.apache.calcite.rel.RelNode)}.
-   *
+   * <p>
    * This method is intended mainly for use while debugging in an IDE,
    * as a convenient short-hand for RelOptUtil.toString.
    * We recommend that classes implementing this interface
@@ -263,10 +264,10 @@ public interface RelNode extends RelOptNode, Cloneable {
    * so don't forget to cache the result if necessary.
    *
    * @return Digest string of this {@code RelNode}
-   *
    * @see #getRelDigest()
    */
-  @Override default String getDigest() {
+  @Override
+  default String getDigest() {
     return getRelDigest().toString();
   }
 
@@ -317,16 +318,14 @@ public interface RelNode extends RelOptNode, Cloneable {
    * @param ordinalInParent Position of the child input, 0 is the first
    * @param p New node that should be put at position {@code ordinalInParent}
    */
-  void replaceInput(
-      int ordinalInParent,
-      RelNode p);
+  void replaceInput(int ordinalInParent, RelNode p);
 
   /**
    * If this relational expression represents an access to a table, returns
    * that table, otherwise returns null.
    *
    * @return If this relational expression represents an access to a table,
-   *   returns that table, otherwise returns null
+   * returns that table, otherwise returns null
    */
   @Nullable RelOptTable getTable();
 
@@ -337,7 +336,7 @@ public interface RelNode extends RelOptNode, Cloneable {
    * "ArrayReader".
    *
    * @return Name of this relational expression's class, sans package name,
-   *   for use in explain
+   * for use in explain
    */
   String getRelTypeName();
 
@@ -358,7 +357,7 @@ public interface RelNode extends RelOptNode, Cloneable {
    * @param context Context for validity checking
    * @return Whether relational expression is valid
    * @throws AssertionError if this relational expression is invalid and
-   *                        litmus is THROW
+   * litmus is THROW
    */
   boolean isValid(Litmus litmus, @Nullable Context context);
 
@@ -370,13 +369,11 @@ public interface RelNode extends RelOptNode, Cloneable {
    * variants of this method with more parameters.
    *
    * @param traitSet Trait set
-   * @param inputs   Inputs
+   * @param inputs Inputs
    * @return Copy of this relational expression, substituting traits and
    * inputs
    */
-  RelNode copy(
-      RelTraitSet traitSet,
-      List<RelNode> inputs);
+  RelNode copy(RelTraitSet traitSet, List<RelNode> inputs);
 
   /**
    * Registers any special rules specific to this kind of relational
@@ -388,7 +385,7 @@ public interface RelNode extends RelOptNode, Cloneable {
    * then call {@code super.register}.</p>
    *
    * @param planner Planner to be used to register additional relational
-   *                expressions
+   * expressions
    */
   void register(RelOptPlanner planner);
 
@@ -423,12 +420,16 @@ public interface RelNode extends RelOptNode, Cloneable {
    */
   RelNode accept(RexShuttle shuttle);
 
-  /** Returns whether a field is nullable. */
+  /**
+   * Returns whether a field is nullable.
+   */
   default boolean fieldIsNullable(int i) {
     return getRowType().getFieldList().get(i).getType().isNullable();
   }
 
-  /** Context of a relational expression, for purposes of checking validity. */
+  /**
+   * Context of a relational expression, for purposes of checking validity.
+   */
   interface Context {
     Set<CorrelationId> correlationIds();
   }

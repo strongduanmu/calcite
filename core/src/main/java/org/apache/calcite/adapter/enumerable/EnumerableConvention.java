@@ -39,32 +39,34 @@ import static java.util.Objects.requireNonNull;
 public enum EnumerableConvention implements Convention {
   INSTANCE;
 
-  /** Cost of an enumerable node versus implementing an equivalent node in a
-   * "typical" calling convention. */
+  /**
+   * Cost of an enumerable node versus implementing an equivalent node in a
+   * "typical" calling convention.
+   */
   public static final double COST_MULTIPLIER = 1.0d;
 
-  @Override public String toString() {
+  @Override
+  public String toString() {
     return getName();
   }
 
-  @Override public Class getInterface() {
+  @Override
+  public Class getInterface() {
     return EnumerableRel.class;
   }
 
-  @Override public String getName() {
+  @Override
+  public String getName() {
     return "ENUMERABLE";
   }
 
-  @Override public @Nullable RelNode enforce(
-      final RelNode input,
-      final RelTraitSet required) {
+  @Override
+  public @Nullable RelNode enforce(final RelNode input, final RelTraitSet required) {
     RelNode rel = input;
     if (input.getConvention() != INSTANCE) {
-      rel = ConventionTraitDef.INSTANCE.convert(
-          input.getCluster().getPlanner(),
-          input, INSTANCE, true);
-      requireNonNull(rel,
-          () -> "Unable to convert input to " + INSTANCE + ", input = " + input);
+      rel = ConventionTraitDef.INSTANCE.convert(input.getCluster().getPlanner(), input, INSTANCE,
+          true);
+      requireNonNull(rel, () -> "Unable to convert input to " + INSTANCE + ", input = " + input);
     }
     RelCollation collation = required.getCollation();
     if (collation != null && collation != RelCollations.EMPTY) {
@@ -73,31 +75,32 @@ public enum EnumerableConvention implements Convention {
     return rel;
   }
 
-  @Override public RelTraitDef getTraitDef() {
+  @Override
+  public RelTraitDef getTraitDef() {
     return ConventionTraitDef.INSTANCE;
   }
 
-  @Override public boolean satisfies(RelTrait trait) {
+  @Override
+  public boolean satisfies(RelTrait trait) {
     return this == trait;
   }
 
-  @Override public void register(RelOptPlanner planner) {}
+  @Override
+  public void register(RelOptPlanner planner) {
+  }
 
-  @Override public boolean canConvertConvention(Convention toConvention) {
+  @Override
+  public boolean canConvertConvention(Convention toConvention) {
     return false;
   }
 
-  @Override public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits,
-      RelTraitSet toTraits) {
+  @Override
+  public boolean useAbstractConvertersForConversion(RelTraitSet fromTraits, RelTraitSet toTraits) {
     return true;
   }
 
-  @Override public RelFactories.Struct getRelFactories() {
-    return RelFactories.Struct.fromContext(
-            Contexts.of(
-                EnumerableRelFactories.ENUMERABLE_TABLE_SCAN_FACTORY,
-                EnumerableRelFactories.ENUMERABLE_PROJECT_FACTORY,
-                EnumerableRelFactories.ENUMERABLE_FILTER_FACTORY,
-                EnumerableRelFactories.ENUMERABLE_SORT_FACTORY));
+  @Override
+  public RelFactories.Struct getRelFactories() {
+    return RelFactories.Struct.fromContext(Contexts.of(EnumerableRelFactories.ENUMERABLE_TABLE_SCAN_FACTORY, EnumerableRelFactories.ENUMERABLE_PROJECT_FACTORY, EnumerableRelFactories.ENUMERABLE_FILTER_FACTORY, EnumerableRelFactories.ENUMERABLE_SORT_FACTORY));
   }
 }

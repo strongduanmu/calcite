@@ -74,7 +74,8 @@ import java.util.Map;
  * @param <T> Sub-type of table created by this factory
  */
 public interface TableFactory<T extends Table> {
-  /** Creates a Table.
+  /**
+   * Creates a Table.
    *
    * @param schema Schema this table belongs to
    * @param name Name of this table
@@ -82,9 +83,6 @@ public interface TableFactory<T extends Table> {
    * @param rowType Row type. Specified if the "columns" JSON property.
    * @return created table
    */
-  T create(
-      SchemaPlus schema,
-      String name,
-      Map<String, Object> operand,
+  T create(SchemaPlus schema, String name, Map<String, Object> operand,
       @Nullable RelDataType rowType);
 }
