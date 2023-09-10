@@ -1620,7 +1620,7 @@ class RexProgramTest extends RexProgramTestBase {
             isTrue(vBool()), literal(1),
             isNotTrue(vBool()), literal(1),
             literal(2)),
-        "CASE(OR(?0.bool0, IS NOT TRUE(?0.bool0)), 1, 2)");
+        "1");
   }
 
   @Test void testSimplifyCaseBranchesCollapse2() {
@@ -2451,6 +2451,132 @@ class RexProgramTest extends RexProgramTestBase {
         "AND(null, IS NULL(?0.int1), OR(null, IS NOT NULL(?0.int2)))",
         "false",
         "IS NULL(?0.int1)");
+  }
+
+  /** Unit test for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-4189">[CALCITE-4189]
+   * Simplify 'p OR (p IS NOT TRUE)' to 'TRUE'</a>. */
+  @Test public void testSimplifyOrNot2() {
+    final SqlOperator func =
+        SqlBasicFunction.create("func", ReturnTypes.BOOLEAN_NULLABLE, OperandTypes.VARIADIC);
+    final RexNode unsafeRel = rexBuilder.makeCall(func, div(vInt(0), literal(2)));
+    // x OR x IS NOT TRUE ==> "true"
+    checkSimplify(or(vBool(), isNotTrue(vBool())), "true");
+    checkSimplify(or(vBoolNotNull(), isNotTrue(vBoolNotNull())), "true");
+    // outside unsafe expression will not prevent simplification
+    checkSimplify(or(unsafeRel, vBool(), isNotTrue(vBool())), "true");
+
+    // x OR NOT x ==> "true" (if x is not nullable)
+    checkSimplify(or(vBoolNotNull(), not(vBoolNotNull())), "true");
+    checkSimplify(or(unsafeRel, vBoolNotNull(), not(vBoolNotNull())), "true");
+
+    // x OR NOT x ==> x IS NOT NULL OR NULL (if x is nullable)
+    checkSimplify3(or(vBool(), not(vBool())),
+        "OR(IS NOT NULL(?0.bool0), null)",
+        "IS NOT NULL(?0.bool0)",
+        "true");
+    checkSimplify3(or(unsafeRel, vBool(), not(vBool())),
+        "OR(func(/(?0.int0, 2)), IS NOT NULL(?0.bool0), null)",
+        "OR(func(/(?0.int0, 2)), IS NOT NULL(?0.bool0))",
+        "true");
+    // remove all redundant NULL
+    checkSimplify3(or(vBool(0), not(vBool(0)), vBool(1), not(vBool(1))),
+        "OR(IS NOT NULL(?0.bool0), null, IS NOT NULL(?0.bool1))",
+        "OR(IS NOT NULL(?0.bool0), IS NOT NULL(?0.bool1))",
+        "true");
+
+    // unsafe expression can not be simplified
+    checkSimplify3(or(unsafeRel, isNotTrue(unsafeRel)),
+        "OR(func(/(?0.int0, 2)), IS NOT TRUE(func(/(?0.int0, 2))))",
+        "OR(func(/(?0.int0, 2)), IS NOT TRUE(func(/(?0.int0, 2))))",
+        "OR(func(/(?0.int0, 2)), NOT(func(/(?0.int0, 2))))");
+    checkSimplifyUnchanged(or(unsafeRel, not(unsafeRel)));
+
+    checkSimplify(or(unsafeRel, trueLiteral), "true");
+  }
+
+  private void checkSarg(String message, Sarg sarg,
+      Matcher<Integer> complexityMatcher, Matcher<String> stringMatcher) {
+    assertThat(message, sarg.complexity(), complexityMatcher);
+    assertThat(message, sarg, hasToString(stringMatcher));
+  }
+
+  /** Tests {@link Sarg#complexity()}. */
+  @SuppressWarnings("UnstableApiUsage")
+  @Test void testSargComplexity() {
+    checkSarg("complexity of 'x is not null'",
+        Sarg.of(RexUnknownAs.FALSE, RangeSets.<Integer>rangeSetAll()),
+        is(1), is("Sarg[IS NOT NULL]"));
+    checkSarg("complexity of 'x is null'",
+        Sarg.of(RexUnknownAs.TRUE, ImmutableRangeSet.<Integer>of()),
+        is(1), is("Sarg[IS NULL]"));
+    checkSarg("complexity of 'false'",
+        Sarg.of(RexUnknownAs.FALSE, ImmutableRangeSet.<Integer>of()),
+        is(0), is("Sarg[FALSE]"));
+    checkSarg("complexity of 'true'",
+        Sarg.of(RexUnknownAs.TRUE, RangeSets.<Integer>rangeSetAll()),
+        is(2), is("Sarg[TRUE]"));
+
+    checkSarg("complexity of 'x = 1'",
+        Sarg.of(RexUnknownAs.UNKNOWN, ImmutableRangeSet.of(Range.singleton(1))),
+        is(1), is("Sarg[1]"));
+    checkSarg("complexity of 'x > 1'",
+        Sarg.of(RexUnknownAs.UNKNOWN,
+            ImmutableRangeSet.of(Range.greaterThan(1))),
+        is(1), is("Sarg[(1..+\u221E)]"));
+    checkSarg("complexity of 'x >= 1'",
+        Sarg.of(RexUnknownAs.UNKNOWN, ImmutableRangeSet.of(Range.atLeast(1))),
+        is(1), is("Sarg[[1..+\u221E)]"));
+    checkSarg("complexity of 'x > 1 or x is null'",
+        Sarg.of(RexUnknownAs.TRUE, ImmutableRangeSet.of(Range.greaterThan(1))),
+        is(2), is("Sarg[(1..+\u221E); NULL AS TRUE]"));
+    checkSarg("complexity of 'x <> 1'",
+        Sarg.of(RexUnknownAs.UNKNOWN,
+            ImmutableRangeSet.of(Range.singleton(1)).complement()),
+        is(1), is("Sarg[(-\u221E..1), (1..+\u221E)]"));
+    checkSarg("complexity of 'x <> 1 or x is null'",
+        Sarg.of(RexUnknownAs.TRUE,
+            ImmutableRangeSet.of(Range.singleton(1)).complement()),
+        is(2), is("Sarg[(-\u221E..1), (1..+\u221E); NULL AS TRUE]"));
+    checkSarg("complexity of 'x < 10 or x >= 20'",
+        Sarg.of(RexUnknownAs.UNKNOWN,
+            ImmutableRangeSet.<Integer>builder()
+                .add(Range.lessThan(10))
+                .add(Range.atLeast(20))
+                .build()),
+        is(2), is("Sarg[(-\u221E..10), [20..+\u221E)]"));
+    checkSarg("complexity of 'x in (2, 4, 6) or x > 20'",
+        Sarg.of(RexUnknownAs.UNKNOWN,
+            ImmutableRangeSet.<Integer>builder()
+                .add(Range.singleton(2))
+                .add(Range.singleton(4))
+                .add(Range.singleton(6))
+                .add(Range.greaterThan(20))
+                .build()),
+        is(4), is("Sarg[2, 4, 6, (20..+\u221E)]"));
+    checkSarg("complexity of 'x between 3 and 8 or x between 10 and 20'",
+        Sarg.of(RexUnknownAs.UNKNOWN,
+            ImmutableRangeSet.<Integer>builder()
+                .add(Range.closed(3, 8))
+                .add(Range.closed(10, 20))
+                .build()),
+        is(2), is("Sarg[[3..8], [10..20]]"));
+  }
+
+  /** Unit test for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-5722">[CALCITE-5722]
+   * {@code Sarg.isComplementedPoints} fails with anti-points which are equal
+   * under {@code compareTo} but not {@code equals}</a>. */
+  @SuppressWarnings("UnstableApiUsage")
+  @Test void testSargAntiPoint() {
+    final Sarg<BigDecimal> sarg =
+        Sarg.of(RexUnknownAs.UNKNOWN,
+            // Create anti-point around 1, with different scales
+            ImmutableRangeSet.<BigDecimal>builder()
+                .add(Range.lessThan(new BigDecimal("1")))
+                .add(Range.greaterThan(new BigDecimal("1.00000000000")))
+                .build());
+    assertThat(sarg.isComplementedPoints(), is(true));
   }
 
   @Test void testInterpreter() {
