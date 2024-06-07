@@ -3287,7 +3287,42 @@ class RelToSqlConverterTest {
         + "WHERE \"product_id\" NOT IN (SELECT \"product_id\"\n"
         + "FROM \"foodmart\".\"sales_fact_1997\"\n"
         + "WHERE \"product_id\" = \"product\".\"product_id\")";
-    sql(query).config(NO_EXPAND_CONFIG).ok(expected);
+    sql(query).withConfig(c -> c.withExpand(false)).ok(expected);
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-5711">[CALCITE-5711]
+   * Implement the SINGLE_VALUE aggregation in PostgreSQL Dialect</a>. */
+  @Test void testSubQueryWithSingleValue() {
+    final String query = "select \"product_class_id\" as c\n"
+        + "from \"product\" where  \"net_weight\" > (select \"product_class_id\" from \"product\")";
+    final String expectedMysql = "SELECT `product`.`product_class_id` AS `C`\n"
+        + "FROM `foodmart`.`product`\n"
+        + "LEFT JOIN (SELECT CASE COUNT(*) "
+        + "WHEN 0 THEN NULL WHEN 1 THEN `product_class_id` ELSE (SELECT NULL\n"
+        + "UNION ALL\n"
+        + "SELECT NULL) END AS `$f0`\n"
+        + "FROM `foodmart`.`product`) AS `t0` ON TRUE\n"
+        + "WHERE `product`.`net_weight` > `t0`.`$f0`";
+    final String expectedPostgresql = "SELECT \"product\".\"product_class_id\" AS \"C\"\n"
+        + "FROM \"foodmart\".\"product\"\n"
+        + "LEFT JOIN (SELECT CASE COUNT(*) WHEN 0 THEN NULL WHEN 1 THEN MIN(\"product_class_id\") ELSE (SELECT CAST(NULL AS INTEGER)\n"
+        + "UNION ALL\n"
+        + "SELECT CAST(NULL AS INTEGER)) END AS \"$f0\"\n"
+        + "FROM \"foodmart\".\"product\") AS \"t0\" ON TRUE\n"
+        + "WHERE \"product\".\"net_weight\" > \"t0\".\"$f0\"";
+    final String expectedHsqldb = "SELECT product.product_class_id AS C\n"
+        + "FROM foodmart.product\n"
+        + "LEFT JOIN (SELECT CASE COUNT(*) WHEN 0 THEN NULL WHEN 1 THEN MIN(product_class_id) ELSE ((VALUES 0E0)\n"
+        + "UNION ALL\n"
+        + "(VALUES 0E0)) END AS $f0\n"
+        + "FROM foodmart.product) AS t0 ON TRUE\n"
+        + "WHERE product.net_weight > t0.$f0";
+    sql(query)
+        .withConfig(c -> c.withExpand(true))
+        .withMysql().ok(expectedMysql)
+        .withPostgresql().ok(expectedPostgresql)
+        .withHsqldb().ok(expectedHsqldb);
   }
 
   @Test void testLike() {
