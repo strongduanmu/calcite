@@ -1435,8 +1435,8 @@ public class SqlToRelConverter {
       SqlNodeList selectList = select.getSelectList();
       SqlNodeList groupList = select.getGroup();
 
-      if ((selectList.size() == 1)
-          && ((groupList == null) || (groupList.size() == 0))) {
+      if (selectList.size() == 1
+          && (groupList == null || groupList.isEmpty())) {
         SqlNode selectExpr = selectList.get(0);
         if (selectExpr instanceof SqlCall) {
           SqlCall selectExprCall = (SqlCall) selectExpr;
@@ -1958,8 +1958,9 @@ public class SqlToRelConverter {
         // ROW_NUMBER() expects specific kind of framing.
         rows = true;
       }
-    } else if (orderList.size() == 0) {
-      // Without ORDER BY, there must be no bracketing.
+    } else if (orderList.isEmpty() && !rows) {
+      // In RANGE without ORDER BY, all rows are equivalent, so bracketing has
+      // no effect.
       sqlLowerBound = SqlWindow.createUnboundedPreceding(SqlParserPos.ZERO);
       sqlUpperBound = SqlWindow.createUnboundedFollowing(SqlParserPos.ZERO);
     } else if (sqlLowerBound == null && sqlUpperBound == null) {
@@ -1976,9 +1977,11 @@ public class SqlToRelConverter {
     for (SqlNode partition : partitionList) {
       partitionKeys.add(bb.convertExpression(partition));
     }
-    final RexNode lowerBound = bb.convertExpression(sqlLowerBound);
-    final RexNode upperBound = bb.convertExpression(sqlUpperBound);
-    if (orderList.size() == 0 && !rows) {
+    final RexNode lowerBound =
+        bb.convertExpression(requireNonNull(sqlLowerBound, "sqlLowerBound"));
+    final RexNode upperBound =
+        bb.convertExpression(requireNonNull(sqlUpperBound, "sqlUpperBound"));
+    if (orderList.isEmpty() && !rows) {
       // A logical range requires an ORDER BY clause. Use the implicit
       // ordering of this relation. There must be one, otherwise it would
       // have failed validation.
@@ -2423,6 +2426,139 @@ public class SqlToRelConverter {
     bb.setRoot(rel, false);
   }
 
+  protected void convertPivot(Blackboard bb, SqlPivot pivot) {
+    final SqlValidatorScope scope = validator().getJoinScope(pivot);
+    final Blackboard pivotBb = createBlackboard(scope, null, false);
+
+    // Convert input
+    convertFrom(pivotBb, pivot.query);
+    final RelNode input = pivotBb.root();
+
+    final RelDataType inputRowType = input.getRowType();
+    relBuilder.push(input);
+
+    // Gather fields.
+    final AggConverter aggConverter = AggConverter.create(pivotBb);
+    final Set<String> usedColumnNames = pivot.usedColumnNames();
+
+    // 1. Gather group keys.
+    inputRowType.getFieldList().stream()
+        .filter(field -> !usedColumnNames.contains(field.getName()))
+        .forEach(field ->
+            aggConverter.addGroupExpr(
+                new SqlIdentifier(field.getName(), SqlParserPos.ZERO)));
+
+    // 2. Gather axes.
+    pivot.axisList.forEach(aggConverter::addGroupExpr);
+
+    // 3. Gather columns used as arguments to aggregate functions.
+    pivotBb.agg = aggConverter;
+    final List<@Nullable String> aggAliasList = new ArrayList<>();
+    assert aggConverter.aggCalls.isEmpty();
+    pivot.forEachAgg((alias, call) -> {
+      call.accept(aggConverter);
+      aggAliasList.add(alias);
+      assert aggConverter.aggCalls.size() == aggAliasList.size();
+    });
+    pivotBb.agg = null;
+
+    // Project the fields that we will need.
+    relBuilder
+        .project(aggConverter.convertedInputExprs.leftList(),
+            aggConverter.convertedInputExprs.rightList());
+
+    // Build expressions.
+
+    // 1. Build group key
+    final RelBuilder.GroupKey groupKey =
+        relBuilder.groupKey(
+            inputRowType.getFieldList().stream()
+                .filter(field -> !usedColumnNames.contains(field.getName()))
+                .map(field ->
+                    aggConverter.addGroupExpr(
+                        new SqlIdentifier(field.getName(), SqlParserPos.ZERO)))
+                .collect(ImmutableBitSet.toImmutableBitSet()));
+
+    // 2. Build axes, for example
+    // FOR (axis1, axis2 ...) IN ...
+    final List<RexNode> axes = new ArrayList<>();
+    for (SqlNode axis : pivot.axisList) {
+      axes.add(relBuilder.field(aggConverter.addGroupExpr(axis)));
+    }
+
+    // 3. Build aggregate expressions, for example
+    // PIVOT (sum(a) AS alias1, min(b) AS alias2, ... FOR ... IN ...)
+    final List<RelBuilder.AggCall> aggCalls = new ArrayList<>();
+    Pair.forEach(aggAliasList, aggConverter.aggCalls, (alias, aggregateCall) ->
+        aggCalls.add(relBuilder.aggregateCall(aggregateCall).as(alias)));
+
+    // 4. Build values, for example
+    // IN ((v11, v12, ...) AS label1, (v21, v22, ...) AS label2, ...)
+    final ImmutableList.Builder<Pair<String, List<RexNode>>> valueList =
+        ImmutableList.builder();
+    pivot.forEachNameValues((alias, nodeList) ->
+        valueList.add(
+            Pair.of(alias,
+                nodeList.stream().map(bb::convertExpression)
+                    .collect(toImmutableList()))));
+
+    final RelNode rel =
+        relBuilder.pivot(groupKey, aggCalls, axes, valueList.build())
+            .build();
+    bb.setRoot(rel, true);
+  }
+
+  protected void convertUnpivot(Blackboard bb, SqlUnpivot unpivot) {
+    final SqlValidatorScope scope = validator().getJoinScope(unpivot);
+    final Blackboard unpivotBb = createBlackboard(scope, null, false);
+
+    // Convert input
+    convertFrom(unpivotBb, unpivot.query);
+    final RelNode input = unpivotBb.root();
+    relBuilder.push(input);
+
+    final List<String> measureNames = unpivot.measureList.stream()
+        .map(node -> ((SqlIdentifier) node).getSimple())
+        .collect(toImmutableList());
+    final List<String> axisNames =  unpivot.axisList.stream()
+        .map(node -> ((SqlIdentifier) node).getSimple())
+        .collect(toImmutableList());
+    final ImmutableList.Builder<Pair<List<RexLiteral>, List<RexNode>>> axisMap =
+        ImmutableList.builder();
+    unpivot.forEachNameValues((nodeList, valueList) -> {
+      if (valueList == null) {
+        valueList =
+            new SqlNodeList(
+                Collections.nCopies(axisNames.size(),
+                    SqlLiteral.createCharString(SqlUnpivot.aliasValue(nodeList),
+                        SqlParserPos.ZERO)),
+                SqlParserPos.ZERO);
+      }
+      final List<RexLiteral> literals = new ArrayList<>();
+      Pair.forEach(valueList, unpivot.axisList, (value, axis) -> {
+        final RelDataType type = validator().getValidatedNodeType(axis);
+        literals.add(convertLiteral((SqlLiteral) value, bb, type));
+      });
+      final List<RexNode> nodes = nodeList.stream()
+          .map(unpivotBb::convertExpression)
+          .collect(toImmutableList());
+      axisMap.add(Pair.of(literals, nodes));
+    });
+    relBuilder.unpivot(unpivot.includeNulls, measureNames, axisNames,
+        axisMap.build());
+    relBuilder.convert(getNamespace(unpivot).getRowType(), false);
+
+    bb.setRoot(relBuilder.build(), true);
+  }
+
+  private void convertTransientScan(Blackboard bb, SqlWithItem withItem) {
+    final SqlValidatorNamespace fromNamespace = getNamespace(withItem).resolve();
+    bb.setRoot(
+        relBuilder.transientScan(withItem.name.getSimple(),
+            fromNamespace.getRowType()).build(),
+        true);
+  }
+
   private void convertIdentifier(Blackboard bb, SqlIdentifier id,
       SqlNodeList extendedColumns, SqlNodeList tableHints) {
     final SqlValidatorNamespace fromNamespace =
@@ -2807,22 +2943,22 @@ public class SqlToRelConverter {
     }
     bb.setRoot(ImmutableList.of(leftRel, rightRel));
     replaceSubQueries(bb, condition, RelOptUtil.Logic.UNKNOWN_AS_FALSE);
-    switch (conditionType) {
-    case ON:
-      bb.setRoot(ImmutableList.of(leftRel, rightRel));
-      return bb.convertExpression(condition);
-    case USING:
-      final SqlNodeList list = (SqlNodeList) condition;
-      final List<String> nameList = new ArrayList<>();
-      for (SqlNode columnName : list) {
-        final SqlIdentifier id = (SqlIdentifier) columnName;
-        String name = id.getSimple();
-        nameList.add(name);
-      }
-      return convertUsing(leftNamespace, rightNamespace, nameList);
-    default:
-      throw Util.unexpected(conditionType);
+    final RelNode newRightRel =
+        bb.root == null || bb.registered.isEmpty()
+            ? rightRel
+            : bb.reRegister(rightRel);
+    bb.setRoot(ImmutableList.of(leftRel, newRightRel));
+    RexNode conditionExp =  bb.convertExpression(condition);
+    if (conditionExp instanceof RexInputRef && newRightRel != rightRel) {
+      int leftFieldCount = leftRel.getRowType().getFieldCount();
+      List<RelDataTypeField> rightFieldList = newRightRel.getRowType().getFieldList();
+      int rightFieldCount = newRightRel.getRowType().getFieldCount();
+      conditionExp =
+          rexBuilder.makeInputRef(
+              rightFieldList.get(rightFieldCount - 1).getType(),
+              leftFieldCount + rightFieldCount - 1);
     }
+    return Pair.of(conditionExp, newRightRel);
   }
 
   /**
@@ -4069,7 +4205,7 @@ public class SqlToRelConverter {
       joinList.add(collect);
     }
 
-    if (joinList.size() == 0) {
+    if (joinList.isEmpty()) {
       joinList.add(lastList);
     }
 

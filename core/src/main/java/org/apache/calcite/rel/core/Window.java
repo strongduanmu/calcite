@@ -47,7 +47,9 @@ import com.google.common.collect.ImmutableList;
 
 import java.util.AbstractList;
 import java.util.List;
-import java.util.Objects;
+
+import static java.util.Objects.hash;
+import static java.util.Objects.requireNonNull;
 
 /**
  * A relational expression representing a set of window aggregates.
@@ -81,8 +83,7 @@ public abstract class Window extends SingleRel {
       List<RexLiteral> constants, RelDataType rowType, List<Group> groups) {
     super(cluster, traitSet, input);
     this.constants = ImmutableList.copyOf(constants);
-    assert rowType != null;
-    this.rowType = rowType;
+    this.rowType = requireNonNull(rowType, "rowType");
     this.groups = ImmutableList.copyOf(groups);
   }
 
@@ -230,11 +231,12 @@ public abstract class Window extends SingleRel {
         RexWindowBound upperBound,
         RelCollation orderKeys,
         List<RexWinAggCall> aggCalls) {
-      this.keys = Objects.requireNonNull(keys);
+      this.keys = requireNonNull(keys, "keys");
       this.isRows = isRows;
-      this.lowerBound = Objects.requireNonNull(lowerBound);
-      this.upperBound = Objects.requireNonNull(upperBound);
-      this.orderKeys = Objects.requireNonNull(orderKeys);
+      this.lowerBound = requireNonNull(lowerBound, "lowerBound");
+      this.upperBound = requireNonNull(upperBound, "upperBound");
+      this.exclude = exclude;
+      this.orderKeys = requireNonNull(orderKeys, "orderKeys");
       this.aggCalls = ImmutableList.copyOf(aggCalls);
       this.digest = computeString();
     }
@@ -255,17 +257,14 @@ public abstract class Window extends SingleRel {
         buf.append(orderKeys);
       }
       if (orderKeys.getFieldCollations().isEmpty()
-          && lowerBound.isUnbounded()
-          && lowerBound.isPreceding()
-          && upperBound.isUnbounded()
-          && upperBound.isFollowing()) {
+          && lowerBound.isUnboundedPreceding()
+          && upperBound.isUnboundedFollowing()) {
         // skip bracket if no ORDER BY, and if bracket is the default,
         // "RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING",
         // which is equivalent to
         // "ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING"
       } else if (!orderKeys.getFieldCollations().isEmpty()
-          && lowerBound.isUnbounded()
-          && lowerBound.isPreceding()
+          && lowerBound.isUnboundedPreceding()
           && upperBound.isCurrentRow()
           && !isRows) {
         // skip bracket if there is ORDER BY, and if bracket is the default,
@@ -403,7 +402,10 @@ public abstract class Window extends SingleRel {
     }
 
     @Override public int hashCode() {
-      return Objects.hash(digest, ordinal, distinct);
+      if (hash == 0) {
+        hash = hash(super.hashCode(), ordinal, distinct, ignoreNulls);
+      }
+      return hash;
     }
 
     @Override public RexCall clone(RelDataType type, List<RexNode> operands) {

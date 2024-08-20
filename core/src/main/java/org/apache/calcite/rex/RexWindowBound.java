@@ -40,6 +40,16 @@ public abstract class RexWindowBound {
     return false;
   }
 
+  /** Returns whether the bound is {@code UNBOUNDED PRECEDING}. */
+  public final boolean isUnboundedPreceding() {
+    return isUnbounded() && isPreceding();
+  }
+
+  /** Returns whether the bound is {@code UNBOUNDED FOLLOWING}. */
+  public final boolean isUnboundedFollowing() {
+    return isUnbounded() && isFollowing();
+  }
+
   /**
    * Returns if the bound is PRECEDING.
    * @return if the bound is PRECEDING

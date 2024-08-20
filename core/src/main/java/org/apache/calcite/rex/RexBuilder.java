@@ -451,8 +451,34 @@ public class RexBuilder {
       RexWindowBound lowerBound,
       RexWindowBound upperBound,
       boolean rows) {
-    if (lowerBound.isUnbounded() && lowerBound.isPreceding()
-        && upperBound.isUnbounded() && upperBound.isFollowing()) {
+    return makeWindow(partitionKeys, orderKeys, lowerBound,
+        upperBound, rows, RexWindowExclusion.EXCLUDE_NO_OTHER);
+  }
+
+  /**
+   * Creates a window specification.
+   *
+   * @param partitionKeys Partition keys
+   * @param orderKeys     Order keys
+   * @param lowerBound    Lower bound
+   * @param upperBound    Upper bound
+   * @param rows          Whether physical. True if row-based, false if
+   *                      range-based
+   * @return window specification
+   */
+  public RexWindow makeWindow(
+      List<RexNode> partitionKeys,
+      ImmutableList<RexFieldCollation> orderKeys,
+      RexWindowBound lowerBound,
+      RexWindowBound upperBound,
+      boolean rows,
+      RexWindowExclusion exclude) {
+    if (orderKeys.isEmpty() && !rows) {
+      lowerBound = RexWindowBounds.UNBOUNDED_PRECEDING;
+      upperBound = RexWindowBounds.UNBOUNDED_FOLLOWING;
+    }
+    if (lowerBound.isUnboundedPreceding()
+        && upperBound.isUnboundedFollowing()) {
       // RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
       //   is equivalent to
       // ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
@@ -763,7 +789,7 @@ public class RexBuilder {
    * Makes a reinterpret cast.
    *
    * @param type          type returned by the cast
-   * @param exp           expression to be casted
+   * @param exp           expression to be cast
    * @param checkOverflow whether an overflow check is required
    * @return a RexCall with two operands and a special return type
    */
@@ -772,7 +798,7 @@ public class RexBuilder {
       RexNode exp,
       RexNode checkOverflow) {
     List<RexNode> args;
-    if ((checkOverflow != null) && checkOverflow.isAlwaysTrue()) {
+    if (checkOverflow.isAlwaysTrue()) {
       args = ImmutableList.of(exp, checkOverflow);
     } else {
       args = ImmutableList.of(exp);
@@ -1056,8 +1082,7 @@ public class RexBuilder {
    * @return Character string literal
    */
   protected RexLiteral makePreciseStringLiteral(String s) {
-    assert s != null;
-    if (s.equals("")) {
+    if (s.isEmpty()) {
       return charEmpty;
     }
     return makeCharLiteral(new NlsString(s, null, null));
@@ -1130,7 +1155,6 @@ public class RexBuilder {
    * defaults.
    */
   public RexLiteral makeCharLiteral(NlsString str) {
-    assert str != null;
     RelDataType type = SqlUtil.createNlsStringType(typeFactory, str);
     return makeLiteral(str, type, SqlTypeName.CHAR);
   }

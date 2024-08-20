@@ -1607,4 +1607,63 @@ class PigRelOpTest extends PigRelTestBase {
         .assertResult(is(result))
         .assertSql(is(sql));
   }
+
+  @Test void testFlattenStrSplit() {
+    final String script = ""
+        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n"
+        + "B = FOREACH A GENERATE FLATTEN(STRSPLIT(DNAME, ',')) as NAMES;\n";
+    final String plan = ""
+        + "LogicalProject(NAMES=[CAST(ITEM(STRSPLIT(PIG_TUPLE($1, ',')), 1)):BINARY(1)])\n"
+        + "  LogicalTableScan(table=[[scott, DEPT]])\n";
+    final String sql = ""
+        + "SELECT CAST(STRSPLIT(PIG_TUPLE(DNAME, ','))[1] AS BINARY(1)) AS NAMES\n"
+        + "FROM scott.DEPT";
+    pig(script).assertRel(hasTree(plan))
+        .assertSql(is(sql));
+  }
+
+  @Test void testMultipleStores() {
+    final String script = ""
+        + "A = LOAD 'scott.DEPT' as (DEPTNO:int, DNAME:chararray, LOC:CHARARRAY);\n"
+        + "B = FILTER A BY DEPTNO <= 30;\n"
+        + "STORE B into 'output.csv';\n"
+        + "C = FILTER A BY DEPTNO >= 20;\n"
+        + "STORE C into 'output1.csv';\n";
+    final String plan = ""
+        + "LogicalFilter(condition=[<=($0, 30)])\n"
+        + "  LogicalTableScan(table=[[scott, DEPT]])\n";
+    final String sql0 = ""
+        + "SELECT *\n"
+        + "FROM scott.DEPT\n"
+        + "WHERE DEPTNO <= 30";
+    final String sql1 = ""
+        + "SELECT *\n"
+        + "FROM scott.DEPT\n"
+        + "WHERE DEPTNO >= 20";
+    pig(script).assertRel(hasTree(plan))
+        .assertSql(is(sql0), 0)
+        .assertSql(is(sql1), 1);
+  }
+
+  @Test void testRankAndFilter() {
+    final String script = ""
+        + "A = LOAD 'emp1' USING PigStorage(',')  as ("
+        + "    id:int, name:chararray, age:int, city:chararray);\n"
+        + "B = rank A;\n"
+        + "C = FILTER B by ($0 > 1);";
+
+    final String plan = ""
+        + "LogicalFilter(condition=[>($0, 1)])\n"
+        + "  LogicalProject(rank_A=[RANK() OVER ()], id=[$0],"
+        + " name=[$1], age=[$2], city=[$3])\n"
+        + "    LogicalTableScan(table=[[emp1]])\n";
+
+    final String sql = "SELECT w0$o0 AS rank_A, id, name, age, city\n"
+        + "FROM (SELECT id, name, age, city, RANK() OVER ()\n"
+        + "    FROM emp1) AS t\n"
+        + "WHERE w0$o0 > 1";
+    pig(script).assertRel(hasTree(plan))
+        .assertSql(is(sql));
+  }
+
 }
